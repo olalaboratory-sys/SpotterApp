@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { iconForKey } from '../../constants/machineIcon';
+import Skeleton from '../../components/Skeleton';
 import { useAuth } from '../../context/AuthContext';
 import { usePlaces } from '../../context/PlacesContext';
 import { useWorkouts } from '../../context/WorkoutsContext';
@@ -115,10 +116,10 @@ export default function HomeScreen() {
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}>
                 {[0, 1, 2].map(i => (
                   <View key={i} style={styles.recentCard}>
-                    <View style={[styles.recentImagePlaceholder, styles.skeleton]} />
+                    <Skeleton style={styles.recentImagePlaceholder} />
                     <View style={styles.recentInfo}>
-                      <View style={[styles.skeletonLine, { width: '80%' }]} />
-                      <View style={[styles.skeletonLine, { width: '55%' }]} />
+                      <Skeleton style={[styles.skeletonLine, { width: '80%' }]} />
+                      <Skeleton style={[styles.skeletonLine, { width: '55%' }]} />
                     </View>
                   </View>
                 ))}
@@ -223,8 +224,7 @@ const styles = StyleSheet.create({
   recentCard: { width: 150, backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
   recentImagePlaceholder: { height: 88, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   recentPhoto: { width: '100%', height: '100%' },
-  skeleton: { backgroundColor: '#e7eae2' },
-  skeletonLine: { height: 11, borderRadius: 6, backgroundColor: '#e7eae2', marginTop: 4 },
+  skeletonLine: { height: 11, borderRadius: 6, marginTop: 4 },
   recentInfo: { padding: 10, gap: 3 },
   recentName: { fontSize: 14, fontWeight: '600', color: Colors.labelPrimary, letterSpacing: -0.2 },
   recentMuscle: { fontSize: 12, color: Colors.labelSecondary },

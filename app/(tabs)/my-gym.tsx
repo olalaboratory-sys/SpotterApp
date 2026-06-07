@@ -7,6 +7,7 @@ import { iconForKey } from '../../constants/machineIcon';
 import { usePlaces } from '../../context/PlacesContext';
 import PlacePickerSheet from '../../components/PlacePickerSheet';
 import SwipeableRow from '../../components/SwipeableRow';
+import Skeleton from '../../components/Skeleton';
 
 function trainedAgo(d: Date | null | undefined): string | null {
   if (!d) return null;
@@ -73,10 +74,22 @@ export default function MyPlacesTab() {
             ))}
           </View>
 
-          {machines.length === 0 ? (
+          {loading && machines.length === 0 ? (
+            <View style={styles.grid}>
+              {[0, 1, 2, 3].map(i => (
+                <View key={i} style={styles.cardWrap}>
+                  <View style={styles.card}>
+                    <Skeleton style={styles.cardImage} />
+                    <Skeleton style={[styles.skeletonLine, { width: '70%' }]} />
+                    <Skeleton style={[styles.skeletonLine, { width: '45%' }]} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : machines.length === 0 ? (
             <View style={styles.empty}>
               <Ionicons name="scan-outline" size={40} color={Colors.labelTertiary} />
-              <Text style={styles.emptyTitle}>{loading ? 'Loading…' : 'No machines here yet'}</Text>
+              <Text style={styles.emptyTitle}>No machines here yet</Text>
               <Text style={styles.emptySub}>Tap “Add a machine” to scan, search, or add one by hand.</Text>
             </View>
           ) : (
@@ -144,6 +157,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#fff', borderRadius: 18, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
   cardImage: { height: 80, borderRadius: 12, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center', marginBottom: 10, overflow: 'hidden' },
   cardPhoto: { width: '100%', height: '100%' },
+  skeletonLine: { height: 11, borderRadius: 6, marginTop: 7 },
   cardName: { fontSize: 15, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.2 },
   cardCat: { fontSize: 12, color: Colors.labelSecondary, marginTop: 2 },
   cardStatus: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
