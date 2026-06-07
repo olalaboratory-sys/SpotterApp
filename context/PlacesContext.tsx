@@ -6,7 +6,10 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from './AuthContext';
+import { useToast } from './ToastContext';
 import { getMachine, registerMachines, Machine } from '../constants/machines';
+
+const SAVE_ERR = "Couldn't sync — check your connection.";
 
 export type PlaceType = 'gym' | 'home' | 'hotel' | 'other';
 
@@ -74,6 +77,7 @@ function toDate(v: any): Date | null {
 
 export function PlacesProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const toast = useToast();
   const [places, setPlaces] = useState<Place[]>([]);
   const [saved, setSaved] = useState<SavedMachine[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -144,39 +148,54 @@ export function PlacesProvider({ children }: { children: React.ReactNode }) {
 
   const addPlace = async (name: string, type: PlaceType) => {
     if (!user) return null;
-    const ref = await addDoc(collection(db, 'users', user.uid, 'places'), {
-      name: name.trim(), type, createdAt: serverTimestamp(),
-    });
-    await setCurrent(ref.id);
-    return ref.id;
+    try {
+      const ref = await addDoc(collection(db, 'users', user.uid, 'places'), {
+        name: name.trim(), type, createdAt: serverTimestamp(),
+      });
+      await setCurrent(ref.id);
+      toast(`${name.trim()} added`, 'success');
+      return ref.id;
+    } catch {
+      toast("Couldn't create that place.", 'error');
+      return null;
+    }
   };
 
   const renamePlace = async (id: string, name: string) => {
     if (!user) return;
-    await updateDoc(doc(db, 'users', user.uid, 'places', id), { name: name.trim() });
+    try {
+      await updateDoc(doc(db, 'users', user.uid, 'places', id), { name: name.trim() });
+    } catch { toast("Couldn't rename that place.", 'error'); }
   };
 
   const deletePlace = async (id: string) => {
     if (!user) return;
-    // Remove the place's saved machines, then the place itself.
-    const toRemove = saved.filter(s => s.placeId === id);
-    await Promise.all(toRemove.map(s => deleteDoc(doc(db, 'users', user!.uid, 'saved', s.id))));
-    await deleteDoc(doc(db, 'users', user.uid, 'places', id));
+    try {
+      // Remove the place's saved machines, then the place itself.
+      const toRemove = saved.filter(s => s.placeId === id);
+      await Promise.all(toRemove.map(s => deleteDoc(doc(db, 'users', user!.uid, 'saved', s.id))));
+      await deleteDoc(doc(db, 'users', user.uid, 'places', id));
+    } catch { toast("Couldn't delete that place.", 'error'); }
   };
 
   const saveTo = async (placeId: string, key: string, status: SaveStatus = 'Added') => {
     if (!user) return;
     if (saved.some(s => s.placeId === placeId && s.key === key)) return; // already saved
     const m = getMachine(key);
-    await addDoc(collection(db, 'users', user.uid, 'saved'), {
-      key, placeId, name: m.name, cat: m.cat, area: m.area, status, savedAt: serverTimestamp(),
-    });
+    try {
+      await addDoc(collection(db, 'users', user.uid, 'saved'), {
+        key, placeId, name: m.name, cat: m.cat, area: m.area, status, savedAt: serverTimestamp(),
+      });
+    } catch { toast(SAVE_ERR, 'error'); }
   };
 
   const removeFrom = async (placeId: string, key: string) => {
     if (!user) return;
     const hit = saved.find(s => s.placeId === placeId && s.key === key);
-    if (hit) await deleteDoc(doc(db, 'users', user.uid, 'saved', hit.id));
+    if (hit) {
+      try { await deleteDoc(doc(db, 'users', user.uid, 'saved', hit.id)); }
+      catch { toast("Couldn't remove that machine.", 'error'); }
+    }
   };
 
   const toggle = async (key: string, status: SaveStatus = 'Added') => {
@@ -198,7 +217,9 @@ export function PlacesProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     const pid = placeId ?? currentId;
     const targets = saved.filter(s => s.key === key && (!pid || s.placeId === pid));
-    await Promise.all(targets.map(s => updateDoc(doc(db, 'users', user!.uid, 'saved', s.id), { photoUri: uri })));
+    try {
+      await Promise.all(targets.map(s => updateDoc(doc(db, 'users', user!.uid, 'saved', s.id), { photoUri: uri })));
+    } catch { toast("Couldn't save that photo.", 'error'); }
   };
 
   const photoFor = (key: string, placeId?: string) => {
@@ -220,9 +241,9 @@ export function PlacesProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     const pid = placeId ?? currentId;
     const targets = saved.filter(s => s.key === key && (!pid || s.placeId === pid));
-    await Promise.all(targets.map(s =>
-      updateDoc(doc(db, 'users', user!.uid, 'saved', s.id), { status }).catch(() => {}),
-    ));
+    try {
+      await Promise.all(targets.map(s => updateDoc(doc(db, 'users', user!.uid, 'saved', s.id), { status })));
+    } catch { toast("Couldn't update status.", 'error'); }
   };
 
   const machineCount = (placeId: string) => saved.filter(s => s.placeId === placeId).length;

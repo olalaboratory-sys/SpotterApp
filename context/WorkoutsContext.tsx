@@ -5,6 +5,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from './AuthContext';
+import { useToast } from './ToastContext';
 
 export type WorkoutMeta = {
   goal: string;
@@ -47,6 +48,7 @@ const WorkoutsContext = createContext<WorkoutsContextType | null>(null);
 
 export function WorkoutsProvider({ children }: { children: React.ReactNode }) {
   const { user, refreshProfile } = useAuth();
+  const toast = useToast();
   const [history, setHistory] = useState<WorkoutRecord[]>([]);
   const [draft, setDraft] = useState<string[]>([]);
   const [meta, setMeta] = useState<WorkoutMeta>(DEFAULT_META);
@@ -74,18 +76,23 @@ export function WorkoutsProvider({ children }: { children: React.ReactNode }) {
 
   const completeWorkout = async (r: { completedCount: number; totalCount: number; setsDone: number; feel: string | null }) => {
     if (!user) return null;
-    const ref = await addDoc(collection(db, 'users', user.uid, 'workouts'), {
-      title: meta.title,
-      exerciseKeys: draft,
-      completedCount: r.completedCount,
-      totalCount: r.totalCount,
-      setsDone: r.setsDone,
-      feel: r.feel,
-      createdAt: serverTimestamp(),
-    });
-    await updateDoc(doc(db, 'users', user.uid), { workoutsCount: increment(1) }).catch(() => {});
-    await refreshProfile().catch(() => {});
-    return ref.id;
+    try {
+      const ref = await addDoc(collection(db, 'users', user.uid, 'workouts'), {
+        title: meta.title,
+        exerciseKeys: draft,
+        completedCount: r.completedCount,
+        totalCount: r.totalCount,
+        setsDone: r.setsDone,
+        feel: r.feel,
+        createdAt: serverTimestamp(),
+      });
+      await updateDoc(doc(db, 'users', user.uid), { workoutsCount: increment(1) }).catch(() => {});
+      await refreshProfile().catch(() => {});
+      return ref.id;
+    } catch {
+      toast("Couldn't save your workout.", 'error');
+      return null;
+    }
   };
 
   const updateWorkoutFeel = async (id: string, feel: string) => {
@@ -95,9 +102,11 @@ export function WorkoutsProvider({ children }: { children: React.ReactNode }) {
 
   const deleteWorkout = async (id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, 'users', user.uid, 'workouts', id));
-    await updateDoc(doc(db, 'users', user.uid), { workoutsCount: increment(-1) }).catch(() => {});
-    await refreshProfile().catch(() => {});
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'workouts', id));
+      await updateDoc(doc(db, 'users', user.uid), { workoutsCount: increment(-1) }).catch(() => {});
+      await refreshProfile().catch(() => {});
+    } catch { toast("Couldn't delete that workout.", 'error'); }
   };
 
   return (

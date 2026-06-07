@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { PlacesProvider } from '../context/PlacesContext';
 import { WorkoutsProvider } from '../context/WorkoutsContext';
+import { ToastProvider } from '../context/ToastContext';
 
 function RootNavigator() {
   const { user, userProfile, loading } = useAuth();
@@ -63,13 +64,15 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <PlacesProvider>
-        <WorkoutsProvider>
-          <StatusBar style="light" />
-          <RootNavigator />
-        </WorkoutsProvider>
-      </PlacesProvider>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <PlacesProvider>
+          <WorkoutsProvider>
+            <StatusBar style="light" />
+            <RootNavigator />
+          </WorkoutsProvider>
+        </PlacesProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 }
