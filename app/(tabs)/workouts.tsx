@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { usePlaces } from '../../context/PlacesContext';
 import { useWorkouts } from '../../context/WorkoutsContext';
+import { useAuth } from '../../context/AuthContext';
+import { labelForGoal } from '../../constants/profile';
 import { allMachines } from '../../constants/machines';
 
 const PRESETS = [
@@ -29,6 +31,35 @@ export default function WorkoutsTab() {
   const router = useRouter();
   const { current } = usePlaces();
   const { history, startDraft, deleteWorkout } = useWorkouts();
+  const { userProfile } = useAuth();
+  const goals = userProfile?.goals ?? [];
+  const experienceLevel = userProfile?.experienceLevel ?? null;
+
+  // Surface the presets that best match the user's stated goals/experience.
+  const recommended = useMemo(() => {
+    const areas = new Set<string>();
+    if (goals.includes('legs')) areas.add('Lower');
+    if (goals.includes('upper') || goals.includes('posture')) areas.add('Upper');
+
+    const byArea = PRESETS.filter(p => p.area && areas.has(p.area));
+    const wantsFullBody = goals.some(g => ['confident', 'learn', 'workouts'].includes(g));
+    // Brand-new / returning lifters get the shortest session first.
+    const wantsQuick = experienceLevel === 'new' || experienceLevel === 'return';
+
+    const recs: typeof PRESETS = [];
+    if (wantsQuick) { const q = PRESETS.find(p => p.title === 'Quick 15-min'); if (q) recs.push(q); }
+    if (wantsFullBody || (!byArea.length && !recs.length)) {
+      const fb = PRESETS.find(p => p.title === 'Full Body Beginner'); if (fb && !recs.includes(fb)) recs.push(fb);
+    }
+    byArea.forEach(p => { if (!recs.includes(p)) recs.push(p); });
+    return recs.slice(0, 3);
+  }, [goals, experienceLevel]);
+
+  const recReason = useMemo(() => {
+    const named = goals.filter(g => ['legs', 'upper', 'posture', 'confident'].includes(g)).map(labelForGoal);
+    if (named.length) return `Based on your goal to ${named.slice(0, 2).join(' & ').toLowerCase()}`;
+    return 'A good place to start';
+  }, [goals]);
 
   const confirmDelete = (w: (typeof history)[number]) => {
     Alert.alert('Delete workout?', `Remove “${w.title}” from your history?`, [
@@ -72,6 +103,25 @@ export default function WorkoutsTab() {
               <View style={styles.buildIcon}><Ionicons name="add" size={28} color={Colors.green} /></View>
             </TouchableOpacity>
           </View>
+
+          {recommended.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Recommended for you</Text>
+              <Text style={styles.recReason}>{recReason}</Text>
+              <View style={styles.presets}>
+                {recommended.map(p => (
+                  <TouchableOpacity key={p.title} style={[styles.presetCard, styles.recCard]} activeOpacity={0.85} onPress={() => startPreset(p)}>
+                    <View style={[styles.presetIcon, styles.recIcon]}><Ionicons name={p.icon} size={22} color="#0a1f12" /></View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.presetTitle}>{p.title}</Text>
+                      <Text style={styles.presetSub}>{p.count} exercises · {p.time}</Text>
+                    </View>
+                    <Ionicons name="arrow-forward" size={18} color={Colors.greenDeep} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Quick start</Text>
@@ -135,7 +185,10 @@ const styles = StyleSheet.create({
   buildSub: { fontSize: 14, color: Colors.labelSecondary, marginTop: 4 },
   buildIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
   presets: { gap: 10 },
+  recReason: { fontSize: 13, color: Colors.labelSecondary, marginTop: -6, marginBottom: 12 },
   presetCard: { backgroundColor: '#fff', borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 13, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
+  recCard: { borderWidth: 1.5, borderColor: Colors.green, backgroundColor: Colors.mist2 },
+  recIcon: { backgroundColor: Colors.lime },
   presetIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
   presetTitle: { fontSize: 16, fontWeight: '600', color: Colors.labelPrimary, letterSpacing: -0.2 },
   presetSub: { fontSize: 12, color: Colors.labelSecondary, marginTop: 2 },

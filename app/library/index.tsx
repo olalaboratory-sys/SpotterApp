@@ -84,7 +84,7 @@ export default function LibraryScreen() {
                   <Ionicons name="chevron-forward" size={18} color={Colors.greenInk} />
                 </TouchableOpacity>
               )}
-              <Text style={styles.sectionTitle}>{results.length} result{results.length === 1 ? '' : 's'}</Text>
+              {results.length > 0 && <Text style={styles.sectionTitle}>{results.length} result{results.length === 1 ? '' : 's'}</Text>}
               {results.map(m => (
                 <TouchableOpacity key={m.key} style={styles.row} onPress={() => openMachine(m.key)} activeOpacity={0.8}>
                   <View style={styles.rowIcon}><Ionicons name={iconForKey(m.key)} size={20} color={Colors.greenDeep} /></View>
@@ -98,7 +98,9 @@ export default function LibraryScreen() {
               ))}
               {results.length === 0 && (
                 <View style={styles.empty}>
+                  <Ionicons name="search-outline" size={40} color={Colors.labelTertiary} />
                   <Text style={styles.emptyText}>No matches for “{trimmed}”.</Text>
+                  <Text style={styles.emptySub}>Try a different term, or add this machine yourself.</Text>
                   <TouchableOpacity style={styles.emptyBtn} onPress={() => router.push('/add-machine')}>
                     <Text style={styles.emptyBtnText}>Add it manually</Text>
                   </TouchableOpacity>
@@ -174,8 +176,9 @@ const styles = StyleSheet.create({
   routineIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: 'rgba(12,15,22,0.12)', alignItems: 'center', justifyContent: 'center' },
   routineTitle: { fontSize: 16, fontWeight: '700', color: Colors.ink, letterSpacing: -0.2 },
   routineSub: { fontSize: 12, color: Colors.greenInk, marginTop: 1 },
-  empty: { alignItems: 'center', paddingVertical: 28, gap: 12 },
-  emptyText: { fontSize: 15, color: Colors.labelSecondary },
+  empty: { alignItems: 'center', paddingVertical: 28, gap: 8 },
+  emptyText: { fontSize: 16, fontWeight: '600', color: Colors.labelPrimary, marginTop: 4 },
+  emptySub: { fontSize: 14, color: Colors.labelSecondary, textAlign: 'center', marginBottom: 6 },
   emptyBtn: { height: 44, paddingHorizontal: 20, borderRadius: 12, backgroundColor: Colors.mist, borderWidth: 1.5, borderColor: Colors.green, alignItems: 'center', justifyContent: 'center' },
   emptyBtnText: { fontSize: 14, fontWeight: '600', color: Colors.greenDeep },
 });

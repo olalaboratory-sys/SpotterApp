@@ -140,7 +140,8 @@ function ResultSheet({ result, onViewGuide, onRetake, onManual }: {
   onRetake: () => void;
   onManual: () => void;
 }) {
-  const [showAlts, setShowAlts] = useState(false);
+  const lowConfidence = result.top.confidence < 70;
+  const [showAlts, setShowAlts] = useState(lowConfidence);
   const top = getMachine(result.top.key);
   return (
     <View style={[styles.container, { justifyContent: 'flex-end' }]}>
@@ -149,9 +150,16 @@ function ResultSheet({ result, onViewGuide, onRetake, onManual }: {
         <View style={styles.resultSheet}>
           <View style={styles.resultHandle} />
           <View style={styles.resultConfidence}>
-            <View style={styles.checkCircle}><Ionicons name="checkmark" size={13} color="#fff" /></View>
-            <Text style={styles.confidenceText}>High confidence match · {result.top.confidence}%</Text>
+            <View style={[styles.checkCircle, lowConfidence && styles.checkCircleLow]}>
+              <Ionicons name={lowConfidence ? 'help' : 'checkmark'} size={13} color="#fff" />
+            </View>
+            <Text style={styles.confidenceText}>
+              {lowConfidence ? 'Best guess' : 'High confidence match'} · {result.top.confidence}%
+            </Text>
           </View>
+          {lowConfidence && (
+            <Text style={styles.lowHint}>Not sure about this one — check the matches below or add it yourself.</Text>
+          )}
           <View style={styles.resultMachine}>
             <View style={styles.resultImage}><Ionicons name={iconForIllo(top.illo)} size={48} color={Colors.green} /></View>
             <View style={{ flex: 1 }}>
@@ -269,7 +277,9 @@ const styles = StyleSheet.create({
   resultHandle: { width: 38, height: 5, borderRadius: 3, backgroundColor: '#e5e5ea', alignSelf: 'center', marginBottom: 18 },
   resultConfidence: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 14 },
   checkCircle: { width: 22, height: 22, borderRadius: 11, backgroundColor: Colors.green, alignItems: 'center', justifyContent: 'center' },
+  checkCircleLow: { backgroundColor: Colors.amber },
   confidenceText: { fontSize: 13, fontWeight: '600', color: Colors.greenDeep },
+  lowHint: { fontSize: 13, color: Colors.labelSecondary, marginTop: 8, lineHeight: 18 },
   resultMachine: { flexDirection: 'row', gap: 16, alignItems: 'center' },
   resultImage: { width: 96, height: 96, borderRadius: 16, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
   resultName: { fontSize: 24, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.5 },

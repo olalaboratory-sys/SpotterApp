@@ -57,8 +57,15 @@ export async function analyzePhoto(_uri?: string): Promise<MatchResult> {
     alternatives.push({ key: k, confidence: 55 + Math.floor(Math.random() * 20) });
   }
 
+  // ~1 in 4 scans is an uncertain "best guess" so the low-confidence flow is
+  // exercised; the rest are confident matches. The real API will supply this.
+  const lowConfidence = Math.random() < 0.25;
+  const topConfidence = lowConfidence
+    ? 55 + Math.floor(Math.random() * 14)  // 55–68%
+    : 88 + Math.floor(Math.random() * 11); // 88–98%
+
   return {
-    top: { key: topKey, confidence: 90 + Math.floor(Math.random() * 9) }, // 90–98%
+    top: { key: topKey, confidence: topConfidence },
     alternatives,
   };
 }
