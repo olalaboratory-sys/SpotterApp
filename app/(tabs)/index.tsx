@@ -140,9 +140,9 @@ export default function HomeScreen() {
             <SectionHead title="Your progress" action="Details" onAction={() => router.push('/progress')} />
             <View style={styles.progressGrid}>
               {[
-                { n: String(saved.length), label: 'machines\nlearned', icon: 'locate-outline' as const },
+                { n: String(saved.length), label: 'machines\nsaved', icon: 'locate-outline' as const },
                 { n: String(history.length), label: 'workouts\ndone', icon: 'barbell-outline' as const },
-                { n: userProfile?.subscriptionStatus === 'trial' ? 'Trial' : 'Free', label: 'gym\nconfidence', icon: 'shield-outline' as const },
+                { n: String(saved.filter(s => s.status === 'Comfortable').length), label: 'confident\nwith', icon: 'shield-checkmark-outline' as const },
               ].map(p => (
                 <View key={p.label} style={styles.progressCard}>
                   <Ionicons name={p.icon} size={19} color={Colors.green} />

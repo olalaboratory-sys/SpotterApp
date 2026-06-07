@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
@@ -26,7 +26,23 @@ function timeAgo(d: Date | null): string {
 export default function WorkoutsTab() {
   const router = useRouter();
   const { current } = usePlaces();
-  const { history, startDraft } = useWorkouts();
+  const { history, startDraft, deleteWorkout } = useWorkouts();
+
+  const confirmDelete = (w: (typeof history)[number]) => {
+    Alert.alert('Delete workout?', `Remove “${w.title}” from your history?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteWorkout(w.id).catch(() => {}) },
+    ]);
+  };
+
+  const repeatWorkout = (w: (typeof history)[number]) => {
+    if (!w.exerciseKeys?.length) return;
+    startDraft(w.exerciseKeys, {
+      goal: w.title, time: '30 min', difficulty: 'Beginner',
+      placeId: current?.id ?? null, placeName: current?.name ?? '', title: w.title,
+    });
+    router.push('/workout/preview');
+  };
 
   const startPreset = (p: (typeof PRESETS)[number]) => {
     const keys = allMachines()
@@ -81,8 +97,9 @@ export default function WorkoutsTab() {
               </View>
             ) : (
               <View style={{ gap: 10 }}>
+                <Text style={styles.hint}>Tap to repeat · long-press to delete</Text>
                 {history.map(w => (
-                  <View key={w.id} style={styles.histCard}>
+                  <TouchableOpacity key={w.id} style={styles.histCard} activeOpacity={0.85} onPress={() => repeatWorkout(w)} onLongPress={() => confirmDelete(w)}>
                     <View style={styles.histIcon}>
                       <Ionicons name={w.completedCount >= w.totalCount ? 'trophy-outline' : 'time-outline'} size={20} color={Colors.greenDeep} />
                     </View>
@@ -90,7 +107,10 @@ export default function WorkoutsTab() {
                       <Text style={styles.histTitle}>{w.title}</Text>
                       <Text style={styles.histSub}>{w.completedCount}/{w.totalCount} exercises · {w.setsDone} sets · {timeAgo(w.createdAt)}</Text>
                     </View>
-                  </View>
+                    {w.exerciseKeys?.length ? (
+                      <View style={styles.repeatBtn}><Ionicons name="refresh" size={16} color={Colors.greenDeep} /></View>
+                    ) : null}
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
@@ -118,8 +138,10 @@ const styles = StyleSheet.create({
   presetSub: { fontSize: 12, color: Colors.labelSecondary, marginTop: 2 },
   histCard: { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: '#fff', borderRadius: 16, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
   histIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
+  repeatBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
   histTitle: { fontSize: 16, fontWeight: '600', color: Colors.labelPrimary },
   histSub: { fontSize: 12, color: Colors.labelSecondary, marginTop: 2 },
+  hint: { fontSize: 12, color: Colors.labelTertiary, marginBottom: 2, marginLeft: 2 },
   emptyCard: { backgroundColor: '#fff', borderRadius: 20, padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 17, fontWeight: '600', color: Colors.labelSecondary },
   emptySub: { fontSize: 13, color: Colors.labelTertiary, textAlign: 'center' },

@@ -32,7 +32,8 @@ export default function WorkoutSession() {
   // Rest timer countdown.
   useEffect(() => {
     if (rest === null) return;
-    if (rest <= 0) { setRest(null); return; }
+    if (rest <= 0) { haptics.success(); setRest(null); return; }
+    if (rest <= 3) haptics.tap(); // tick the final seconds
     const t = setTimeout(() => setRest(r => (r === null ? null : r - 1)), 1000);
     return () => clearTimeout(t);
   }, [rest]);

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
-  collection, doc, onSnapshot, addDoc, updateDoc, increment,
+  collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, increment,
   serverTimestamp, Timestamp, query, orderBy, limit,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -39,6 +39,7 @@ type WorkoutsContextType = {
   removeFromDraft: (key: string) => void;
   swapInDraft: (oldKey: string, newKey: string) => void;
   completeWorkout: (r: { completedCount: number; totalCount: number; setsDone: number; feel: string | null }) => Promise<void>;
+  deleteWorkout: (id: string) => Promise<void>;
 };
 
 const WorkoutsContext = createContext<WorkoutsContextType | null>(null);
@@ -85,8 +86,15 @@ export function WorkoutsProvider({ children }: { children: React.ReactNode }) {
     await refreshProfile().catch(() => {});
   };
 
+  const deleteWorkout = async (id: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, 'users', user.uid, 'workouts', id));
+    await updateDoc(doc(db, 'users', user.uid), { workoutsCount: increment(-1) }).catch(() => {});
+    await refreshProfile().catch(() => {});
+  };
+
   return (
-    <WorkoutsContext.Provider value={{ history, draft, meta, startDraft, removeFromDraft, swapInDraft, completeWorkout }}>
+    <WorkoutsContext.Provider value={{ history, draft, meta, startDraft, removeFromDraft, swapInDraft, completeWorkout, deleteWorkout }}>
       {children}
     </WorkoutsContext.Provider>
   );
