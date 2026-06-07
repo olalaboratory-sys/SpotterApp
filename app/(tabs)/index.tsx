@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { iconForKey } from '../../constants/machineIcon';
 import { allMachines } from '../../constants/machines';
+import { workoutStreak } from '../../lib/streak';
 import Skeleton from '../../components/Skeleton';
 import PressableScale from '../../components/PressableScale';
 
@@ -25,22 +26,6 @@ function getGreeting() {
   return 'Good evening';
 }
 
-const dayKey = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
-const DAY = 86400000;
-
-/** Consecutive-day workout streak ending today or yesterday. */
-function workoutStreak(dates: (Date | null)[]): number {
-  const days = new Set(dates.filter(Boolean).map(d => dayKey(d as Date)));
-  if (!days.size) return 0;
-  let cursor = dayKey(new Date());
-  if (!days.has(cursor)) {
-    cursor -= DAY;                 // allow the streak to count up to yesterday
-    if (!days.has(cursor)) return 0;
-  }
-  let streak = 0;
-  while (days.has(cursor)) { streak++; cursor -= DAY; }
-  return streak;
-}
 
 function SectionHead({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
   return (
@@ -81,7 +66,7 @@ export default function HomeScreen() {
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
           <View style={styles.heroWrap}>
-            <TouchableOpacity style={styles.hero} onPress={() => router.push('/(tabs)/scan')} activeOpacity={0.9}>
+            <PressableScale style={styles.hero} scaleTo={0.98} onPress={() => router.push('/(tabs)/scan')} accessibilityRole="button" accessibilityLabel="Scan a machine">
               <LinearGradient colors={[Colors.ink2, Colors.ink]} style={StyleSheet.absoluteFill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
               <View style={styles.heroCornerGraphic}><Ionicons name="scan-outline" size={28} color={Colors.lime} /></View>
               <View style={styles.heroContent}>
@@ -90,7 +75,7 @@ export default function HomeScreen() {
                 <Text style={styles.heroTitle}>Scan a machine</Text>
                 <Text style={styles.heroBody}>Point your camera at any machine to get a beginner guide in seconds.</Text>
               </View>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
 
           <View style={styles.section}>

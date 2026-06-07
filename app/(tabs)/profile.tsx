@@ -6,6 +6,8 @@ import { Colors } from '../../constants/colors';
 import { useAuth, getDaysLeftInTrial } from '../../context/AuthContext';
 import { usePlaces } from '../../context/PlacesContext';
 import { useWorkouts } from '../../context/WorkoutsContext';
+import { workoutStreak } from '../../lib/streak';
+import PressableScale from '../../components/PressableScale';
 
 const SETTINGS: { icon: keyof typeof Ionicons.glyphMap; label: string; sub: string; route: string }[] = [
   { icon: 'stats-chart-outline', label: 'Progress & badges', sub: 'Streak · learned machines', route: '/progress' },
@@ -23,6 +25,7 @@ export default function ProfileTab() {
 
   const daysLeft = getDaysLeftInTrial(userProfile?.trialStartedAt ?? null);
   const isTrialActive = userProfile?.subscriptionStatus === 'trial' && daysLeft > 0;
+  const streak = workoutStreak(history.map(w => w.createdAt));
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -58,7 +61,7 @@ export default function ProfileTab() {
           {/* Trial/subscription card */}
           {isTrialActive ? (
             <View style={styles.section}>
-              <TouchableOpacity style={styles.premiumCard} onPress={() => router.push('/paywall')} activeOpacity={0.9}>
+              <PressableScale style={styles.premiumCard} onPress={() => router.push('/paywall')}>
                 <View style={styles.premiumLeft}>
                   <Text style={styles.premiumLabel}>Premium</Text>
                   <Text style={styles.premiumTitle}>Trial active — {daysLeft} day{daysLeft !== 1 ? 's' : ''} left</Text>
@@ -67,18 +70,18 @@ export default function ProfileTab() {
                 <View style={styles.premiumBadge}>
                   <Ionicons name="flash" size={20} color={Colors.ink} />
                 </View>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           ) : (
             <View style={styles.section}>
-              <TouchableOpacity style={styles.upgradeCard} onPress={() => router.push('/paywall')} activeOpacity={0.9}>
+              <PressableScale style={styles.upgradeCard} onPress={() => router.push('/paywall')}>
                 <Ionicons name="flash-outline" size={20} color={Colors.greenDeep} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.upgradeTitle}>Upgrade to Premium</Text>
                   <Text style={styles.upgradeSub}>Unlock unlimited scans and guides.</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={Colors.labelTertiary} />
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           )}
 
@@ -86,9 +89,9 @@ export default function ProfileTab() {
             <Text style={styles.sectionTitle}>Activity</Text>
             <View style={styles.progressRow}>
               {[
-                { n: String(saved.length), l: 'machines learned' },
+                { n: String(saved.length), l: 'machines saved' },
                 { n: String(history.length), l: 'workouts done' },
-                { n: isTrialActive ? `${daysLeft}d` : '—', l: 'trial left' },
+                { n: streak > 0 ? `${streak}d` : '—', l: 'day streak' },
               ].map(p => (
                 <View key={p.l} style={styles.statCard}>
                   <Text style={styles.statNum}>{p.n}</Text>
