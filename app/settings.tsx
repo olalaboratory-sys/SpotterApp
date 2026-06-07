@@ -10,6 +10,7 @@ import { Colors } from '../constants/colors';
 import { useAuth, getDaysLeftInTrial } from '../context/AuthContext';
 import { db } from '../lib/firebase';
 import { EXPERIENCE_OPTIONS, GOAL_OPTIONS, normalizeExperience, normalizeGoals } from '../constants/profile';
+import Skeleton from '../components/Skeleton';
 
 const UNITS = ['kg', 'lb'];
 
@@ -94,7 +95,26 @@ export default function SettingsScreen() {
   ];
 
   if (!loaded) {
-    return <View style={[styles.screen, { alignItems: 'center', justifyContent: 'center' }]}><ActivityIndicator color={Colors.green} /></View>;
+    return (
+      <View style={styles.screen}>
+        <SafeAreaView style={{ flex: 1 }}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+              <Ionicons name="chevron-back" size={22} color={Colors.labelPrimary} />
+            </TouchableOpacity>
+            <Text style={styles.title}>Settings</Text>
+          </View>
+          <View style={{ padding: 20, paddingTop: 4, gap: 22 }}>
+            {[140, 200, 120].map((h, i) => (
+              <View key={i} style={{ gap: 10 }}>
+                <Skeleton style={styles.skelTitle} />
+                <Skeleton style={[styles.skelCard, { height: h }]} />
+              </View>
+            ))}
+          </View>
+        </SafeAreaView>
+      </View>
+    );
   }
 
   return (
@@ -236,6 +256,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 6 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 28, fontWeight: '700', letterSpacing: -0.4, color: Colors.labelPrimary },
+  skelTitle: { width: 120, height: 12, borderRadius: 6, marginLeft: 4 },
+  skelCard: { borderRadius: 18 },
   cardWrap: { gap: 10 },
   cardTitle: { fontSize: 14, fontWeight: '700', color: Colors.labelSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginLeft: 4 },
   card: { backgroundColor: '#fff', borderRadius: 18, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6 },

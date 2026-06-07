@@ -7,7 +7,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { iconForKey } from '../../constants/machineIcon';
+import { allMachines } from '../../constants/machines';
 import Skeleton from '../../components/Skeleton';
+import PressableScale from '../../components/PressableScale';
+
+const CATALOG_COUNT = allMachines().length;
 import { useAuth } from '../../context/AuthContext';
 import { usePlaces } from '../../context/PlacesContext';
 import { useWorkouts } from '../../context/WorkoutsContext';
@@ -99,11 +103,11 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <View style={styles.quickGrid}>
               {QUICK.map(q => (
-                <TouchableOpacity key={q.title} style={styles.quickCard} activeOpacity={0.8} onPress={q.onPress}>
+                <PressableScale key={q.title} containerStyle={{ flex: 1 }} style={styles.quickCard} onPress={q.onPress}>
                   <View style={styles.quickIcon}><Ionicons name={q.icon} size={20} color={Colors.greenDeep} /></View>
                   <Text style={styles.quickTitle} numberOfLines={1}>{q.title}</Text>
                   <Text style={styles.quickSub}>{q.sub}</Text>
-                </TouchableOpacity>
+                </PressableScale>
               ))}
             </View>
           </View>
@@ -136,7 +140,7 @@ export default function HomeScreen() {
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 12, paddingBottom: 4 }}>
                 {recent.map(m => (
-                  <TouchableOpacity key={m.id} style={styles.recentCard} onPress={() => router.push({ pathname: '/guide/[key]', params: { key: m.key } })} activeOpacity={0.85}>
+                  <PressableScale key={m.id} style={styles.recentCard} onPress={() => router.push({ pathname: '/guide/[key]', params: { key: m.key } })}>
                     <View style={styles.recentImagePlaceholder}>
                       {m.photoUri
                         ? <Image source={{ uri: m.photoUri }} style={styles.recentPhoto} resizeMode="cover" />
@@ -150,7 +154,7 @@ export default function HomeScreen() {
                         <Text style={styles.recentStatusText}>{m.status}</Text>
                       </View>
                     </View>
-                  </TouchableOpacity>
+                  </PressableScale>
                 ))}
               </ScrollView>
             )}
@@ -161,7 +165,7 @@ export default function HomeScreen() {
               <View style={styles.browseIcon}><Ionicons name="library-outline" size={20} color={Colors.greenDeep} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.browseTitle}>Browse the machine library</Text>
-                <Text style={styles.browseSub}>65 machines · by body area</Text>
+                <Text style={styles.browseSub}>{CATALOG_COUNT} machines · by body area</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={Colors.labelTertiary} />
             </TouchableOpacity>

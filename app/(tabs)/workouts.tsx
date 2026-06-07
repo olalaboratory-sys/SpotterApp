@@ -8,6 +8,7 @@ import { useWorkouts } from '../../context/WorkoutsContext';
 import { useAuth } from '../../context/AuthContext';
 import { labelForGoal } from '../../constants/profile';
 import { allMachines } from '../../constants/machines';
+import PressableScale from '../../components/PressableScale';
 
 const PRESETS = [
   { icon: 'body-outline' as const, title: 'Full Body Beginner', goal: 'Full body', area: null as string | null, count: 6, time: '35 min' },
@@ -110,14 +111,14 @@ export default function WorkoutsTab() {
               <Text style={styles.recReason}>{recReason}</Text>
               <View style={styles.presets}>
                 {recommended.map(p => (
-                  <TouchableOpacity key={p.title} style={[styles.presetCard, styles.recCard]} activeOpacity={0.85} onPress={() => startPreset(p)}>
+                  <PressableScale key={p.title} style={[styles.presetCard, styles.recCard]} onPress={() => startPreset(p)}>
                     <View style={[styles.presetIcon, styles.recIcon]}><Ionicons name={p.icon} size={22} color="#0a1f12" /></View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.presetTitle}>{p.title}</Text>
                       <Text style={styles.presetSub}>{p.count} exercises · {p.time}</Text>
                     </View>
                     <Ionicons name="arrow-forward" size={18} color={Colors.greenDeep} />
-                  </TouchableOpacity>
+                  </PressableScale>
                 ))}
               </View>
             </View>
@@ -127,14 +128,14 @@ export default function WorkoutsTab() {
             <Text style={styles.sectionTitle}>Quick start</Text>
             <View style={styles.presets}>
               {PRESETS.map(p => (
-                <TouchableOpacity key={p.title} style={styles.presetCard} activeOpacity={0.85} onPress={() => startPreset(p)}>
+                <PressableScale key={p.title} style={styles.presetCard} onPress={() => startPreset(p)}>
                   <View style={styles.presetIcon}><Ionicons name={p.icon} size={22} color={Colors.greenDeep} /></View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.presetTitle}>{p.title}</Text>
                     <Text style={styles.presetSub}>{p.count} exercises · {p.time}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={Colors.labelTertiary} />
-                </TouchableOpacity>
+                </PressableScale>
               ))}
             </View>
           </View>
