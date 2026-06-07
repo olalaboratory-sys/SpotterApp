@@ -15,7 +15,7 @@ const FEELINGS = [
 export default function WorkoutComplete() {
   const router = useRouter();
   const { full, completed, total, sets } = useLocalSearchParams<{ full: string; completed: string; total: string; sets: string }>();
-  const { completeWorkout, draft, meta } = useWorkouts();
+  const { completeWorkout, updateWorkoutFeel, draft, meta } = useWorkouts();
   const { markTrained } = usePlaces();
 
   const isFull = full === '1';
@@ -26,14 +26,22 @@ export default function WorkoutComplete() {
 
   const [feel, setFeel] = useState<string | null>(null);
   const savedRef = useRef(false);
+  const workoutIdRef = useRef<string | null>(null);
 
   // Persist the workout exactly once.
   useEffect(() => {
     if (savedRef.current) return;
     savedRef.current = true;
-    completeWorkout({ completedCount, totalCount, setsDone, feel: null }).catch(() => {});
+    completeWorkout({ completedCount, totalCount, setsDone, feel: null })
+      .then(id => { workoutIdRef.current = id; })
+      .catch(() => {});
     markTrained(draft, meta.placeId).catch(() => {});
   }, []);
+
+  const pickFeel = (id: string) => {
+    setFeel(id);
+    if (workoutIdRef.current) updateWorkoutFeel(workoutIdRef.current, id).catch(() => {});
+  };
 
   return (
     <View style={styles.screen}>
@@ -63,7 +71,7 @@ export default function WorkoutComplete() {
           <Text style={styles.feelTitle}>How did that feel?</Text>
           <View style={styles.feelRow}>
             {FEELINGS.map(f => (
-              <TouchableOpacity key={f.id} style={[styles.feelBtn, feel === f.id && styles.feelBtnActive]} onPress={() => setFeel(f.id)}>
+              <TouchableOpacity key={f.id} style={[styles.feelBtn, feel === f.id && styles.feelBtnActive]} onPress={() => pickFeel(f.id)}>
                 <Ionicons name={f.icon} size={22} color={feel === f.id ? Colors.greenDeep : Colors.labelSecondary} />
                 <Text style={[styles.feelLabel, feel === f.id && styles.feelLabelActive]}>{f.label}</Text>
               </TouchableOpacity>

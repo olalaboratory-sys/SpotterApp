@@ -38,7 +38,8 @@ type WorkoutsContextType = {
   startDraft: (keys: string[], meta: WorkoutMeta) => void;
   removeFromDraft: (key: string) => void;
   swapInDraft: (oldKey: string, newKey: string) => void;
-  completeWorkout: (r: { completedCount: number; totalCount: number; setsDone: number; feel: string | null }) => Promise<void>;
+  completeWorkout: (r: { completedCount: number; totalCount: number; setsDone: number; feel: string | null }) => Promise<string | null>;
+  updateWorkoutFeel: (id: string, feel: string) => Promise<void>;
   deleteWorkout: (id: string) => Promise<void>;
 };
 
@@ -72,8 +73,8 @@ export function WorkoutsProvider({ children }: { children: React.ReactNode }) {
     setDraft(d => d.map(k => (k === oldKey ? newKey : k)));
 
   const completeWorkout = async (r: { completedCount: number; totalCount: number; setsDone: number; feel: string | null }) => {
-    if (!user) return;
-    await addDoc(collection(db, 'users', user.uid, 'workouts'), {
+    if (!user) return null;
+    const ref = await addDoc(collection(db, 'users', user.uid, 'workouts'), {
       title: meta.title,
       exerciseKeys: draft,
       completedCount: r.completedCount,
@@ -84,6 +85,12 @@ export function WorkoutsProvider({ children }: { children: React.ReactNode }) {
     });
     await updateDoc(doc(db, 'users', user.uid), { workoutsCount: increment(1) }).catch(() => {});
     await refreshProfile().catch(() => {});
+    return ref.id;
+  };
+
+  const updateWorkoutFeel = async (id: string, feel: string) => {
+    if (!user) return;
+    await updateDoc(doc(db, 'users', user.uid, 'workouts', id), { feel }).catch(() => {});
   };
 
   const deleteWorkout = async (id: string) => {
@@ -94,7 +101,7 @@ export function WorkoutsProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <WorkoutsContext.Provider value={{ history, draft, meta, startDraft, removeFromDraft, swapInDraft, completeWorkout, deleteWorkout }}>
+    <WorkoutsContext.Provider value={{ history, draft, meta, startDraft, removeFromDraft, swapInDraft, completeWorkout, updateWorkoutFeel, deleteWorkout }}>
       {children}
     </WorkoutsContext.Provider>
   );

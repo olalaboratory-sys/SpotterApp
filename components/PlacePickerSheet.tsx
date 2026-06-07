@@ -14,13 +14,22 @@ const TYPES: { id: PlaceType; label: string; icon: keyof typeof Ionicons.glyphMa
 ];
 
 export default function PlacePickerSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { places, currentId, setCurrent, addPlace, deletePlace, machineCount } = usePlaces();
+  const { places, currentId, setCurrent, addPlace, renamePlace, deletePlace, machineCount } = usePlaces();
   const [creating, setCreating] = useState(false);
   const [manage, setManage] = useState(false);
   const [name, setName] = useState('');
   const [type, setType] = useState<PlaceType>('gym');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
 
-  const reset = () => { setCreating(false); setManage(false); setName(''); setType('gym'); };
+  const reset = () => { setCreating(false); setManage(false); setName(''); setType('gym'); setEditingId(null); setEditName(''); };
+
+  const startEdit = (id: string, current: string) => { setEditingId(id); setEditName(current); };
+  const saveEdit = async () => {
+    const id = editingId;
+    if (id && editName.trim()) await renamePlace(id, editName.trim());
+    setEditingId(null); setEditName('');
+  };
   const close = () => { reset(); onClose(); };
 
   const create = async () => {
@@ -46,7 +55,7 @@ export default function PlacePickerSheet({ visible, onClose }: { visible: boolea
         <View style={styles.headerRow}>
           <Text style={styles.title}>{creating ? 'New place' : manage ? 'Manage places' : 'My places'}</Text>
           {!creating && (
-            <TouchableOpacity onPress={() => setManage(m => !m)}>
+            <TouchableOpacity onPress={() => { setManage(m => !m); setEditingId(null); }}>
               <Text style={styles.manageLink}>{manage ? 'Done' : 'Manage'}</Text>
             </TouchableOpacity>
           )}
@@ -87,18 +96,42 @@ export default function PlacePickerSheet({ visible, onClose }: { visible: boolea
                 onPress={() => { if (manage) return; setCurrent(p.id); close(); }}
               >
                 <View style={styles.placeIcon}><Ionicons name={(TYPES.find(t => t.id === p.type)?.icon) ?? 'barbell-outline'} size={20} color={Colors.greenDeep} /></View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.placeName}>{p.name}</Text>
-                  <Text style={styles.placeSub}>{machineCount(p.id)} machines</Text>
-                </View>
-                {manage ? (
-                  <TouchableOpacity onPress={() => confirmDelete(p.id, p.name)} hitSlop={8}>
-                    <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-                  </TouchableOpacity>
-                ) : p.id === currentId ? (
-                  <Ionicons name="checkmark-circle" size={22} color={Colors.green} />
+                {editingId === p.id ? (
+                  <>
+                    <TextInput
+                      style={styles.editInput}
+                      value={editName}
+                      onChangeText={setEditName}
+                      autoFocus
+                      onSubmitEditing={saveEdit}
+                      placeholder="Place name"
+                      placeholderTextColor={Colors.labelTertiary}
+                    />
+                    <TouchableOpacity onPress={saveEdit} hitSlop={8}>
+                      <Ionicons name="checkmark-circle" size={24} color={Colors.green} />
+                    </TouchableOpacity>
+                  </>
                 ) : (
-                  <View style={styles.radio} />
+                  <>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.placeName}>{p.name}</Text>
+                      <Text style={styles.placeSub}>{machineCount(p.id)} machines</Text>
+                    </View>
+                    {manage ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                        <TouchableOpacity onPress={() => startEdit(p.id, p.name)} hitSlop={8}>
+                          <Ionicons name="pencil-outline" size={19} color={Colors.greenDeep} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => confirmDelete(p.id, p.name)} hitSlop={8}>
+                          <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                        </TouchableOpacity>
+                      </View>
+                    ) : p.id === currentId ? (
+                      <Ionicons name="checkmark-circle" size={22} color={Colors.green} />
+                    ) : (
+                      <View style={styles.radio} />
+                    )}
+                  </>
                 )}
               </TouchableOpacity>
             ))}
@@ -131,6 +164,7 @@ const styles = StyleSheet.create({
   newIcon: { width: 40, height: 40, borderRadius: 11, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: Colors.green, borderStyle: 'dashed' },
   newText: { fontSize: 16, fontWeight: '600', color: Colors.greenDeep },
   input: { backgroundColor: '#fff', borderRadius: 14, borderWidth: 1.5, borderColor: Colors.separator, padding: 14, fontSize: 16, color: Colors.labelPrimary },
+  editInput: { flex: 1, fontSize: 16, fontWeight: '600', color: Colors.labelPrimary, borderBottomWidth: 1.5, borderBottomColor: Colors.green, paddingVertical: 2 },
   typeRow: { flexDirection: 'row', gap: 8 },
   typeBtn: { flex: 1, alignItems: 'center', gap: 5, paddingVertical: 12, borderRadius: 12, backgroundColor: '#fff', borderWidth: 1.5, borderColor: Colors.separator },
   typeBtnActive: { borderColor: Colors.green, backgroundColor: Colors.mist2 },

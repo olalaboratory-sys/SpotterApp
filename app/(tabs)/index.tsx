@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, Image,
 } from 'react-native';
@@ -20,6 +20,23 @@ function getGreeting() {
   return 'Good evening';
 }
 
+const dayKey = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
+const DAY = 86400000;
+
+/** Consecutive-day workout streak ending today or yesterday. */
+function workoutStreak(dates: (Date | null)[]): number {
+  const days = new Set(dates.filter(Boolean).map(d => dayKey(d as Date)));
+  if (!days.size) return 0;
+  let cursor = dayKey(new Date());
+  if (!days.has(cursor)) {
+    cursor -= DAY;                 // allow the streak to count up to yesterday
+    if (!days.has(cursor)) return 0;
+  }
+  let streak = 0;
+  while (days.has(cursor)) { streak++; cursor -= DAY; }
+  return streak;
+}
+
 function SectionHead({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
   return (
     <View style={styles.sectionHead}>
@@ -36,6 +53,7 @@ export default function HomeScreen() {
   const { history } = useWorkouts();
 
   const firstName = userProfile?.displayName?.split(' ')[0] ?? 'there';
+  const streak = useMemo(() => workoutStreak(history.map(w => w.createdAt)), [history]);
 
   const QUICK = [
     { icon: 'list-outline' as const, title: 'Beginner workout', sub: 'Build in 1 tap', onPress: () => router.push('/workout/builder') },
@@ -51,8 +69,8 @@ export default function HomeScreen() {
             <Text style={styles.tagline}>Ready to learn a machine?</Text>
           </View>
           <View style={styles.streak}>
-            <Ionicons name="flame" size={16} color={Colors.amber} />
-            <Text style={styles.streakNum}>{saved.length}</Text>
+            <Ionicons name="flame" size={16} color={streak > 0 ? Colors.amber : Colors.labelTertiary} />
+            <Text style={[styles.streakNum, streak === 0 && { color: Colors.labelTertiary }]}>{streak}</Text>
           </View>
         </View>
 
