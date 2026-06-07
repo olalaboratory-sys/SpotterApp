@@ -7,6 +7,8 @@ import { Colors } from '../../constants/colors';
 import { StepDots } from '../../components/ui/StepDots';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../lib/firebase';
+import PressableScale from '../../components/PressableScale';
+import * as haptics from '../../lib/haptics';
 
 const GOALS = [
   { id: 'confident', label: 'Feel confident at the gym', icon: 'shield-checkmark-outline' as const },
@@ -22,8 +24,10 @@ export default function GoalsScreen() {
   const { user } = useAuth();
   const [selected, setSelected] = useState<string[]>([]);
 
-  const toggle = (id: string) =>
+  const toggle = (id: string) => {
+    haptics.tap();
     setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
+  };
 
   const onContinue = () => {
     if (!selected.length) return;
@@ -50,17 +54,18 @@ export default function GoalsScreen() {
             {GOALS.map(g => {
               const on = selected.includes(g.id);
               return (
-                <TouchableOpacity
+                <PressableScale
                   key={g.id}
+                  containerStyle={styles.tileWrap}
+                  scaleTo={0.96}
                   style={[styles.tile, on && styles.tileSelected]}
                   onPress={() => toggle(g.id)}
-                  activeOpacity={0.8}
                 >
                   <View style={[styles.tileIcon, on && styles.tileIconSelected]}>
                     <Ionicons name={g.icon} size={21} color={on ? '#fff' : Colors.greenDeep} />
                   </View>
                   <Text style={[styles.tileLabel, on && styles.tileLabelSelected]}>{g.label}</Text>
-                </TouchableOpacity>
+                </PressableScale>
               );
             })}
           </View>
@@ -90,8 +95,9 @@ const styles = StyleSheet.create({
   title: { fontSize: 27, fontWeight: '700', letterSpacing: -0.5, color: Colors.labelPrimary, marginBottom: 8 },
   sub: { fontSize: 15, color: Colors.labelSecondary, marginBottom: 22, lineHeight: 21 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 11 },
+  tileWrap: { width: '47%', flexGrow: 1 },
   tile: {
-    width: '47%', height: 116, borderRadius: 16, padding: 15,
+    height: 116, borderRadius: 16, padding: 15,
     backgroundColor: '#fff', borderWidth: 1.5, borderColor: Colors.separator,
     justifyContent: 'space-between',
   },

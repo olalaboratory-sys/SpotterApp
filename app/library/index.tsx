@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { iconForKey } from '../../constants/machineIcon';
+import PressableScale from '../../components/PressableScale';
 import {
   MACHINE_AREAS, FREE_WEIGHT_FAMILIES, countInArea, countInFamily,
   beginnerMachines, searchMachines, areaForQuery, BodyArea, Family,
@@ -22,11 +23,11 @@ const FAMILY_ICON: Record<Family, keyof typeof Ionicons.glyphMap> = {
 
 function GridTile({ icon, label, count, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; count: number; onPress: () => void }) {
   return (
-    <TouchableOpacity style={styles.tile} onPress={onPress} activeOpacity={0.85}>
+    <PressableScale containerStyle={styles.tileWrap} style={styles.tile} onPress={onPress}>
       <View style={styles.tileIcon}><Ionicons name={icon} size={22} color={Colors.greenDeep} /></View>
       <Text style={styles.tileLabel}>{label}</Text>
       <Text style={styles.tileCount}>{count} {count === 1 ? 'item' : 'items'}</Text>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -71,10 +72,9 @@ export default function LibraryScreen() {
           {trimmed ? (
             <View style={styles.section}>
               {suggestedArea && (
-                <TouchableOpacity
+                <PressableScale
                   style={styles.routineCard}
                   onPress={() => router.push({ pathname: '/library/[category]', params: { category: suggestedArea, kind: 'area' } })}
-                  activeOpacity={0.85}
                 >
                   <View style={styles.routineIcon}><Ionicons name="sparkles-outline" size={20} color={Colors.ink} /></View>
                   <View style={{ flex: 1 }}>
@@ -82,7 +82,7 @@ export default function LibraryScreen() {
                     <Text style={styles.routineSub}>See all {suggestedArea} machines</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={Colors.greenInk} />
-                </TouchableOpacity>
+                </PressableScale>
               )}
               {results.length > 0 && <Text style={styles.sectionTitle}>{results.length} result{results.length === 1 ? '' : 's'}</Text>}
               {results.map(m => (
@@ -162,7 +162,8 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 19, fontWeight: '700', letterSpacing: -0.3, color: Colors.labelPrimary, marginBottom: 4 },
   sectionSub: { fontSize: 13, color: Colors.labelSecondary, marginBottom: 12 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
-  tile: { width: '47%', flexGrow: 1, backgroundColor: '#fff', borderRadius: 18, padding: 16, gap: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+  tileWrap: { width: '47%', flexGrow: 1 },
+  tile: { backgroundColor: '#fff', borderRadius: 18, padding: 16, gap: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
   tileIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
   tileLabel: { fontSize: 16, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.2 },
   tileCount: { fontSize: 12, color: Colors.labelSecondary },

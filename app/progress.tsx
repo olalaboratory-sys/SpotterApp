@@ -7,6 +7,7 @@ import { usePlaces } from '../context/PlacesContext';
 import { useWorkouts } from '../context/WorkoutsContext';
 import { useAuth } from '../context/AuthContext';
 import { labelForGoal, labelForExperience } from '../constants/profile';
+import { useCountUp } from '../lib/useCountUp';
 import GoalRing from '../components/GoalRing';
 
 const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -41,6 +42,12 @@ export default function ProgressScreen() {
 
   const learned = saved.filter(s => s.status === 'Comfortable');
   const totalSets = history.reduce((a, w) => a + w.setsDone, 0);
+
+  // Animated count-ups for the headline stats and the goal ring.
+  const savedCount = useCountUp(saved.length);
+  const workoutCount = useCountUp(history.length);
+  const setsCount = useCountUp(totalSets);
+  const ringDone = useCountUp(Math.min(weekTotal, WEEKLY_GOAL), 600);
 
   const badges = [
     { id: 'firstScan', label: 'First machine', icon: 'scan-outline' as const, earned: saved.length >= 1 },
@@ -93,16 +100,16 @@ export default function ProgressScreen() {
           )}
 
           <View style={styles.statRow}>
-            <View style={styles.statCard}><Text style={styles.statNum}>{saved.length}</Text><Text style={styles.statLabel}>machines{'\n'}learned</Text></View>
-            <View style={styles.statCard}><Text style={styles.statNum}>{history.length}</Text><Text style={styles.statLabel}>workouts{'\n'}done</Text></View>
-            <View style={styles.statCard}><Text style={styles.statNum}>{totalSets}</Text><Text style={styles.statLabel}>total{'\n'}sets</Text></View>
+            <View style={styles.statCard}><Text style={styles.statNum}>{savedCount}</Text><Text style={styles.statLabel}>machines{'\n'}saved</Text></View>
+            <View style={styles.statCard}><Text style={styles.statNum}>{workoutCount}</Text><Text style={styles.statLabel}>workouts{'\n'}done</Text></View>
+            <View style={styles.statCard}><Text style={styles.statNum}>{setsCount}</Text><Text style={styles.statLabel}>total{'\n'}sets</Text></View>
           </View>
 
           <View>
             <Text style={styles.sectionTitle}>This week</Text>
             <View style={styles.goalCard}>
-              <GoalRing size={88} goal={WEEKLY_GOAL} done={weekTotal}>
-                <Text style={styles.ringNum}>{Math.min(weekTotal, WEEKLY_GOAL)}/{WEEKLY_GOAL}</Text>
+              <GoalRing size={88} goal={WEEKLY_GOAL} done={ringDone}>
+                <Text style={styles.ringNum}>{ringDone}/{WEEKLY_GOAL}</Text>
               </GoalRing>
               <View style={{ flex: 1 }}>
                 <Text style={styles.goalTitle}>{goalMet ? 'Weekly goal hit 🎉' : 'Weekly goal'}</Text>

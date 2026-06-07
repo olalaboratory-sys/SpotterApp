@@ -8,6 +8,8 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { Colors } from '../../constants/colors';
 import { StepDots } from '../../components/ui/StepDots';
 import { SpotButton } from '../../components/ui/SpotButton';
+import PressableScale from '../../components/PressableScale';
+import * as haptics from '../../lib/haptics';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../lib/firebase';
 
@@ -53,11 +55,11 @@ export default function ExperienceScreen() {
             {OPTIONS.map(opt => {
               const on = selected === opt.id;
               return (
-                <TouchableOpacity
+                <PressableScale
                   key={opt.id}
+                  scaleTo={0.98}
                   style={[styles.card, on && styles.cardSelected]}
-                  onPress={() => setSelected(opt.id)}
-                  activeOpacity={0.8}
+                  onPress={() => { if (!on) haptics.tap(); setSelected(opt.id); }}
                 >
                   <View style={[styles.iconWrap, on && styles.iconWrapSelected]}>
                     <Ionicons name={opt.icon} size={22} color={on ? '#fff' : Colors.greenDeep} />
@@ -69,7 +71,7 @@ export default function ExperienceScreen() {
                   <View style={[styles.radio, on && styles.radioSelected]}>
                     {on && <View style={styles.radioDot} />}
                   </View>
-                </TouchableOpacity>
+                </PressableScale>
               );
             })}
           </View>
