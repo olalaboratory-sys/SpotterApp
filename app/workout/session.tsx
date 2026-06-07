@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Modal, Pressable,
+  View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Modal, Animated, Easing,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { Colors } from '../../constants/colors';
 import { iconForIllo } from '../../constants/machineIcon';
 import * as haptics from '../../lib/haptics';
 import { getNotifs } from '../../lib/prefs';
+import BottomSheet from '../../components/BottomSheet';
 import { useWorkouts } from '../../context/WorkoutsContext';
 import { getMachine, keyForName } from '../../constants/machines';
 
@@ -25,6 +26,15 @@ export default function WorkoutSession() {
   const [restAlerts, setRestAlerts] = useState(true);
 
   useEffect(() => { getNotifs().then(n => setRestAlerts(n.restAlerts)); }, []);
+
+  // Smoothly animate the rest ring instead of jumping each second.
+  const ringDeg = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (rest === null) return;
+    const target = Math.max(0, Math.min(1, rest / REST_SECONDS)) * 360;
+    Animated.timing(ringDeg, { toValue: target, duration: 950, easing: Easing.linear, useNativeDriver: true }).start();
+  }, [rest]);
+  const ringRotate = ringDeg.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] });
 
   const key = draft[index];
   const machine = key ? getMachine(key) : null;
@@ -85,7 +95,6 @@ export default function WorkoutSession() {
     );
   }
 
-  const restPct = rest !== null ? rest / REST_SECONDS : 0;
   const setsForThis = setsDone[index] ?? 0;
   const isLast = index === draft.length - 1;
 
@@ -158,7 +167,7 @@ export default function WorkoutSession() {
           <View style={styles.restCard}>
             <Text style={styles.restLabel}>Rest</Text>
             <View style={styles.ring}>
-              <View style={[styles.ringFill, { transform: [{ rotate: `${restPct * 360}deg` }] }]} />
+              <Animated.View style={[styles.ringFill, { transform: [{ rotate: ringRotate }] }]} />
               <Text style={styles.restNum}>{rest ?? 0}s</Text>
             </View>
             <View style={styles.restActions}>
@@ -174,25 +183,21 @@ export default function WorkoutSession() {
       </Modal>
 
       {/* Swap sheet */}
-      <Modal visible={swapOpen} transparent animationType="slide" onRequestClose={() => setSwapOpen(false)}>
-        <Pressable style={styles.sheetBackdrop} onPress={() => setSwapOpen(false)} />
-        <View style={styles.swapSheet}>
-          <View style={styles.handle} />
-          <Text style={styles.swapTitle}>Swap exercise</Text>
-          <Text style={styles.swapSub}>These train the same muscles.</Text>
-          {machine.alts.length === 0 && <Text style={styles.swapSub}>No alternatives listed for this one.</Text>}
-          {machine.alts.map((a, i) => (
-            <TouchableOpacity key={i} style={styles.swapRow} onPress={() => onSwap(a.n)}>
-              <View style={styles.swapIcon}><Ionicons name="barbell-outline" size={18} color={Colors.greenDeep} /></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.swapName}>{a.n}</Text>
-                <Text style={styles.swapMuscle}>{a.muscle}</Text>
-              </View>
-              <View style={styles.swapTag}><Text style={styles.swapTagText}>{a.tag}</Text></View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </Modal>
+      <BottomSheet visible={swapOpen} onClose={() => setSwapOpen(false)}>
+        <Text style={styles.swapTitle}>Swap exercise</Text>
+        <Text style={styles.swapSub}>These train the same muscles.</Text>
+        {machine.alts.length === 0 && <Text style={styles.swapSub}>No alternatives listed for this one.</Text>}
+        {machine.alts.map((a, i) => (
+          <TouchableOpacity key={i} style={styles.swapRow} onPress={() => onSwap(a.n)}>
+            <View style={styles.swapIcon}><Ionicons name="barbell-outline" size={18} color={Colors.greenDeep} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.swapName}>{a.n}</Text>
+              <Text style={styles.swapMuscle}>{a.muscle}</Text>
+            </View>
+            <View style={styles.swapTag}><Text style={styles.swapTagText}>{a.tag}</Text></View>
+          </TouchableOpacity>
+        ))}
+      </BottomSheet>
     </View>
   );
 }

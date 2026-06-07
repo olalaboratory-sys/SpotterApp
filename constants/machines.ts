@@ -6054,6 +6054,13 @@ export function keyForName(name: string): string {
   return m ? m.key : 'lat';
 }
 
+/** Like keyForName but returns null when there's no real catalog match. */
+export function findKeyByName(name: string): string | null {
+  const n = norm(name);
+  const m = allMachines().find(x => norm(x.name) === n);
+  return m ? m.key : null;
+}
+
 /** Get a machine by key, falling back to the Lat Pulldown if unknown. */
 export function getMachine(key: string | undefined): Machine {
   return (key && MACHINES[key]) || MACHINES.lat;

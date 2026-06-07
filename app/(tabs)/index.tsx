@@ -40,10 +40,20 @@ export default function HomeScreen() {
   const router = useRouter();
   const { userProfile } = useAuth();
   const { current, currentMachines, recent, saved, loading } = usePlaces();
-  const { history } = useWorkouts();
+  const { history, startDraft } = useWorkouts();
 
   const firstName = userProfile?.displayName?.split(' ')[0] ?? 'there';
   const streak = useMemo(() => workoutStreak(history.map(w => w.createdAt)), [history]);
+
+  const lastWorkout = history[0];
+  const repeatLast = () => {
+    if (!lastWorkout?.exerciseKeys?.length) return;
+    startDraft(lastWorkout.exerciseKeys, {
+      goal: lastWorkout.title, time: '30 min', difficulty: 'Beginner',
+      placeId: current?.id ?? null, placeName: current?.name ?? '', title: lastWorkout.title,
+    });
+    router.push('/workout/preview');
+  };
 
   const QUICK = [
     { icon: 'list-outline' as const, title: 'Beginner workout', sub: 'Build in 1 tap', onPress: () => router.push('/workout/builder') },
@@ -96,6 +106,20 @@ export default function HomeScreen() {
               ))}
             </View>
           </View>
+
+          {lastWorkout?.exerciseKeys?.length ? (
+            <View style={styles.section}>
+              <PressableScale style={styles.resumeCard} scaleTo={0.98} onPress={repeatLast}>
+                <View style={styles.resumeIcon}><Ionicons name="refresh" size={22} color={Colors.lime} /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.resumeEyebrow}>JUMP BACK IN</Text>
+                  <Text style={styles.resumeTitle} numberOfLines={1}>{lastWorkout.title}</Text>
+                  <Text style={styles.resumeSub}>{lastWorkout.completedCount}/{lastWorkout.totalCount} exercises last time</Text>
+                </View>
+                <View style={styles.resumeBtn}><Text style={styles.resumeBtnText}>Repeat</Text></View>
+              </PressableScale>
+            </View>
+          ) : null}
 
           <View style={[styles.section, { paddingHorizontal: 0 }]}>
             <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
@@ -201,6 +225,13 @@ const styles = StyleSheet.create({
   addManual: { height: 46, borderRadius: 14, borderWidth: 1.5, borderColor: Colors.separator, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   addManualText: { fontSize: 15, fontWeight: '600', color: Colors.labelPrimary },
   quickGrid: { flexDirection: 'row', gap: 12 },
+  resumeCard: { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: Colors.ink, borderRadius: 18, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12 },
+  resumeIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(201,251,78,0.14)', alignItems: 'center', justifyContent: 'center' },
+  resumeEyebrow: { fontSize: 11, fontWeight: '700', letterSpacing: 1.4, color: Colors.lime },
+  resumeTitle: { fontSize: 16, fontWeight: '700', color: '#fff', marginTop: 3, letterSpacing: -0.2 },
+  resumeSub: { fontSize: 12, color: 'rgba(231,236,245,0.6)', marginTop: 2 },
+  resumeBtn: { paddingHorizontal: 16, height: 38, borderRadius: 100, backgroundColor: Colors.lime, alignItems: 'center', justifyContent: 'center' },
+  resumeBtnText: { fontSize: 14, fontWeight: '700', color: Colors.ink },
   quickCard: { flex: 1, backgroundColor: '#fff', borderRadius: 18, padding: 15, gap: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
   quickIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
   quickTitle: { fontSize: 15, fontWeight: '600', color: Colors.labelPrimary, letterSpacing: -0.2 },

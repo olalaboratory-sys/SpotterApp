@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  SafeAreaView, Dimensions, Image,
+  SafeAreaView, Dimensions, Image, Animated,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { getMachine } from '../../constants/machines';
+import { getMachine, findKeyByName } from '../../constants/machines';
 import { iconForKey } from '../../constants/machineIcon';
 import * as haptics from '../../lib/haptics';
 import { usePlaces } from '../../context/PlacesContext';
@@ -53,12 +53,12 @@ function MistakeCard({ t, w, f }: { t: string; w: string; f: string }) {
   );
 }
 
-function AltCard({ n, muscle, tag, onPress }: { n: string; muscle: string; tag: string; onPress?: () => void }) {
+function AltCard({ n, muscle, tag, icon, onPress }: { n: string; muscle: string; tag: string; icon: keyof typeof Ionicons.glyphMap; onPress?: () => void }) {
   const tagColor = tag === 'Easier' ? Colors.mist : tag === 'No machine' ? '#f2f2f7' : Colors.lime;
   const tagTextColor = tag === 'No machine' ? Colors.labelSecondary : tag === 'Easier' ? Colors.greenDeep : '#0a1f12';
   return (
-    <TouchableOpacity style={styles.altCard} onPress={onPress} activeOpacity={0.8}>
-      <View style={styles.altIcon}><Ionicons name="barbell-outline" size={20} color={Colors.greenDeep} /></View>
+    <TouchableOpacity style={styles.altCard} onPress={onPress} activeOpacity={onPress ? 0.7 : 1} disabled={!onPress}>
+      <View style={styles.altIcon}><Ionicons name={icon} size={20} color={Colors.greenDeep} /></View>
       <View style={{ flex: 1 }}>
         <Text style={styles.altName}>{n}</Text>
         <Text style={styles.altMuscle}>{muscle}</Text>
@@ -66,6 +66,7 @@ function AltCard({ n, muscle, tag, onPress }: { n: string; muscle: string; tag: 
       <View style={[styles.altTag, { backgroundColor: tagColor }]}>
         <Text style={[styles.altTagText, { color: tagTextColor }]}>{tag}</Text>
       </View>
+      {onPress && <Ionicons name="chevron-forward" size={16} color={Colors.labelTertiary} style={{ marginLeft: 4 }} />}
     </TouchableOpacity>
   );
 }
@@ -83,6 +84,15 @@ export default function GuideScreen() {
 
   const [localPhoto, setLocalPhoto] = useState<string | null>(null);
   const photo = localPhoto ?? (current ? photoFor(machineKey, current.id) : null);
+
+  // Cross-fade the tab content when switching tabs.
+  const tabFade = useRef(new Animated.Value(1)).current;
+  const changeTab = (i: number) => {
+    if (i === tab) return;
+    setTab(i);
+    tabFade.setValue(0);
+    Animated.timing(tabFade, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+  };
 
   const onToggleSave = () => {
     haptics.tap();
@@ -198,7 +208,7 @@ export default function GuideScreen() {
               <TouchableOpacity
                 key={t}
                 style={[styles.tabItem, tab === i && styles.tabItemActive]}
-                onPress={() => setTab(i)}
+                onPress={() => changeTab(i)}
               >
                 <Text style={[styles.tabLabel, tab === i && styles.tabLabelActive]}>{t}</Text>
               </TouchableOpacity>
@@ -206,7 +216,7 @@ export default function GuideScreen() {
           </ScrollView>
 
           {/* Tab content */}
-          <View style={styles.tabContent}>
+          <Animated.View style={[styles.tabContent, { opacity: tabFade }]}>
             {tab === 0 && <StepList steps={machine.setup} />}
             {tab === 1 && <StepList steps={machine.movement} />}
             {tab === 2 && (
@@ -220,10 +230,20 @@ export default function GuideScreen() {
                   <Ionicons name="swap-horizontal-outline" size={17} color={Colors.greenDeep} />
                   <Text style={styles.altNoteText}>Machine taken? These train the same muscles.</Text>
                 </View>
-                {machine.alts.map((a, i) => <AltCard key={i} {...a} />)}
+                {machine.alts.map((a, i) => {
+                  const altKey = findKeyByName(a.n);
+                  return (
+                    <AltCard
+                      key={i}
+                      {...a}
+                      icon={altKey ? iconForKey(altKey) : 'barbell-outline'}
+                      onPress={altKey ? () => router.push({ pathname: '/guide/[key]', params: { key: altKey } }) : undefined}
+                    />
+                  );
+                })}
               </View>
             )}
-          </View>
+          </Animated.View>
 
           {/* Safety note */}
           <View style={styles.safetyNote}>
