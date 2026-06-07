@@ -24,6 +24,7 @@ export default function SignupScreen() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [focused, setFocused] = useState<string | null>(null);
 
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
     clientId: googleWebClientId,
@@ -99,8 +100,8 @@ export default function SignupScreen() {
             <Text style={styles.sub}>Start your 7-day free trial today.</Text>
 
             <View style={styles.form}>
-              <View style={styles.inputWrap}>
-                <Ionicons name="person-outline" size={18} color={Colors.labelTertiary} style={styles.inputIcon} />
+              <View style={[styles.inputWrap, focused === 'name' && styles.inputWrapFocused]}>
+                <Ionicons name="person-outline" size={18} color={focused === 'name' ? Colors.green : Colors.labelTertiary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="Your name"
@@ -108,10 +109,12 @@ export default function SignupScreen() {
                   autoCapitalize="words"
                   value={name}
                   onChangeText={setName}
+                  onFocus={() => setFocused('name')}
+                  onBlur={() => setFocused(null)}
                 />
               </View>
-              <View style={styles.inputWrap}>
-                <Ionicons name="mail-outline" size={18} color={Colors.labelTertiary} style={styles.inputIcon} />
+              <View style={[styles.inputWrap, focused === 'email' && styles.inputWrapFocused]}>
+                <Ionicons name="mail-outline" size={18} color={focused === 'email' ? Colors.green : Colors.labelTertiary} style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="Email"
@@ -120,10 +123,12 @@ export default function SignupScreen() {
                   keyboardType="email-address"
                   value={email}
                   onChangeText={setEmail}
+                  onFocus={() => setFocused('email')}
+                  onBlur={() => setFocused(null)}
                 />
               </View>
-              <View style={styles.inputWrap}>
-                <Ionicons name="lock-closed-outline" size={18} color={Colors.labelTertiary} style={styles.inputIcon} />
+              <View style={[styles.inputWrap, focused === 'password' && styles.inputWrapFocused]}>
+                <Ionicons name="lock-closed-outline" size={18} color={focused === 'password' ? Colors.green : Colors.labelTertiary} style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { flex: 1 }]}
                   placeholder="Password (min. 6 characters)"
@@ -131,6 +136,8 @@ export default function SignupScreen() {
                   secureTextEntry={!showPw}
                   value={password}
                   onChangeText={setPassword}
+                  onFocus={() => setFocused('password')}
+                  onBlur={() => setFocused(null)}
                 />
                 <TouchableOpacity onPress={() => setShowPw(v => !v)} style={styles.eyeBtn}>
                   <Ionicons name={showPw ? 'eye-off-outline' : 'eye-outline'} size={18} color={Colors.labelTertiary} />
@@ -197,6 +204,7 @@ const styles = StyleSheet.create({
   sub: { fontSize: 16, color: Colors.labelSecondary, marginBottom: 28 },
   form: { gap: 12 },
   inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, borderWidth: 1.5, borderColor: Colors.separator, height: 52 },
+  inputWrapFocused: { borderColor: Colors.green, backgroundColor: Colors.mist2 },
   inputIcon: { marginLeft: 14, marginRight: 4 },
   input: { flex: 1, fontSize: 16, color: Colors.labelPrimary, paddingHorizontal: 8 },
   eyeBtn: { padding: 14 },

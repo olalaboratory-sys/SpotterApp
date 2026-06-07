@@ -34,6 +34,7 @@ function GridTile({ icon, label, count, onPress }: { icon: keyof typeof Ionicons
 export default function LibraryScreen() {
   const router = useRouter();
   const [q, setQ] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   const trimmed = q.trim();
 
   const results = useMemo(() => (trimmed ? searchMachines(trimmed) : []), [trimmed]);
@@ -52,8 +53,8 @@ export default function LibraryScreen() {
           <Text style={styles.title}>Machine library</Text>
         </View>
 
-        <View style={styles.searchRow}>
-          <Ionicons name="search" size={18} color={Colors.labelTertiary} />
+        <View style={[styles.searchRow, searchFocused && styles.searchRowFocused]}>
+          <Ionicons name="search" size={18} color={searchFocused ? Colors.green : Colors.labelTertiary} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search machines, muscles, “butt”, “abs”…"
@@ -62,6 +63,8 @@ export default function LibraryScreen() {
             onChangeText={setQ}
             autoCorrect={false}
             returnKeyType="search"
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
           />
           {trimmed ? (
             <TouchableOpacity onPress={() => setQ('')}><Ionicons name="close-circle" size={18} color={Colors.labelTertiary} /></TouchableOpacity>
@@ -156,7 +159,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 6 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 28, fontWeight: '700', letterSpacing: -0.4, color: Colors.labelPrimary },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 20, marginVertical: 10, paddingHorizontal: 14, height: 44, borderRadius: 14, backgroundColor: '#fff', borderWidth: 1, borderColor: Colors.separator },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 20, marginVertical: 10, paddingHorizontal: 14, height: 44, borderRadius: 14, backgroundColor: '#fff', borderWidth: 1.5, borderColor: Colors.separator },
+  searchRowFocused: { borderColor: Colors.green, backgroundColor: Colors.mist2 },
   searchInput: { flex: 1, fontSize: 16, color: Colors.labelPrimary },
   section: { paddingHorizontal: 20, marginBottom: 24 },
   sectionTitle: { fontSize: 19, fontWeight: '700', letterSpacing: -0.3, color: Colors.labelPrimary, marginBottom: 4 },

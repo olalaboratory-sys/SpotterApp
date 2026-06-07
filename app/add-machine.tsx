@@ -42,6 +42,7 @@ export default function AddMachineModal() {
 
   // find mode
   const [q, setQ] = useState('');
+  const [focused, setFocused] = useState<string | null>(null);
   const results = useMemo(() => (q.trim() ? searchMachines(q) : []), [q]);
 
   // custom mode
@@ -129,8 +130,8 @@ export default function AddMachineModal() {
 
           {mode === 'find' ? (
             <>
-              <View style={styles.searchRow}>
-                <Ionicons name="search" size={18} color={Colors.labelTertiary} />
+              <View style={[styles.searchRow, focused === 'search' && styles.inputFocused]}>
+                <Ionicons name="search" size={18} color={focused === 'search' ? Colors.green : Colors.labelTertiary} />
                 <TextInput
                   style={styles.searchInput}
                   placeholder="Search the catalog…"
@@ -138,6 +139,8 @@ export default function AddMachineModal() {
                   value={q}
                   onChangeText={setQ}
                   autoCorrect={false}
+                  onFocus={() => setFocused('search')}
+                  onBlur={() => setFocused(null)}
                 />
               </View>
               <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 4, gap: 10 }} keyboardShouldPersistTaps="handled">
@@ -185,13 +188,15 @@ export default function AddMachineModal() {
               </View>
 
               <Text style={styles.label}>Name</Text>
-              <View style={styles.inputWrap}>
+              <View style={[styles.inputWrap, focused === 'name' && styles.inputFocused]}>
                 <TextInput
                   style={styles.input}
                   placeholder="e.g. Hammer Strength Row"
                   placeholderTextColor={Colors.labelTertiary}
                   value={name}
                   onChangeText={setName}
+                  onFocus={() => setFocused('name')}
+                  onBlur={() => setFocused(null)}
                 />
               </View>
 
@@ -233,7 +238,8 @@ const styles = StyleSheet.create({
   segBtnActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
   segText: { fontSize: 14, fontWeight: '600', color: Colors.labelSecondary },
   segTextActive: { color: Colors.labelPrimary },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 20, marginTop: 14, paddingHorizontal: 14, height: 44, borderRadius: 14, backgroundColor: '#fff', borderWidth: 1, borderColor: Colors.separator },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 20, marginTop: 14, paddingHorizontal: 14, height: 44, borderRadius: 14, backgroundColor: '#fff', borderWidth: 1.5, borderColor: Colors.separator },
+  inputFocused: { borderColor: Colors.green, backgroundColor: Colors.mist2 },
   searchInput: { flex: 1, fontSize: 16, color: Colors.labelPrimary },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 14, padding: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
   resultIcon: { width: 40, height: 40, borderRadius: 11, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
