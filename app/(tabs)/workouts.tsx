@@ -14,6 +14,8 @@ const PRESETS = [
   { icon: 'flash-outline' as const, title: 'Quick 15-min', goal: 'Full body', area: null, count: 3, time: '15 min' },
 ];
 
+const FEEL_LABEL: Record<string, string> = { easy: 'Felt easy', right: 'Just right', hard: 'Felt tough' };
+
 function timeAgo(d: Date | null): string {
   if (!d) return '';
   const days = Math.floor((Date.now() - d.getTime()) / 86400000);
@@ -106,6 +108,7 @@ export default function WorkoutsTab() {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.histTitle}>{w.title}</Text>
                       <Text style={styles.histSub}>{w.completedCount}/{w.totalCount} exercises · {w.setsDone} sets · {timeAgo(w.createdAt)}</Text>
+                      {w.feel && FEEL_LABEL[w.feel] ? <Text style={styles.histFeel}>{FEEL_LABEL[w.feel]}</Text> : null}
                     </View>
                     {w.exerciseKeys?.length ? (
                       <View style={styles.repeatBtn}><Ionicons name="refresh" size={16} color={Colors.greenDeep} /></View>
@@ -141,6 +144,7 @@ const styles = StyleSheet.create({
   repeatBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
   histTitle: { fontSize: 16, fontWeight: '600', color: Colors.labelPrimary },
   histSub: { fontSize: 12, color: Colors.labelSecondary, marginTop: 2 },
+  histFeel: { fontSize: 11, fontWeight: '600', color: Colors.greenDeep, marginTop: 3 },
   hint: { fontSize: 12, color: Colors.labelTertiary, marginBottom: 2, marginLeft: 2 },
   emptyCard: { backgroundColor: '#fff', borderRadius: 20, padding: 32, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 17, fontWeight: '600', color: Colors.labelSecondary },

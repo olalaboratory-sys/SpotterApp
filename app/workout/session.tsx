@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { iconForIllo } from '../../constants/machineIcon';
 import * as haptics from '../../lib/haptics';
+import { getNotifs } from '../../lib/prefs';
 import { useWorkouts } from '../../context/WorkoutsContext';
 import { getMachine, keyForName } from '../../constants/machines';
 
@@ -21,6 +22,9 @@ export default function WorkoutSession() {
   const [setsDone, setSetsDone] = useState<number[]>(() => draft.map(() => 0));
   const [rest, setRest] = useState<number | null>(null);
   const [swapOpen, setSwapOpen] = useState(false);
+  const [restAlerts, setRestAlerts] = useState(true);
+
+  useEffect(() => { getNotifs().then(n => setRestAlerts(n.restAlerts)); }, []);
 
   const key = draft[index];
   const machine = key ? getMachine(key) : null;
@@ -32,11 +36,11 @@ export default function WorkoutSession() {
   // Rest timer countdown.
   useEffect(() => {
     if (rest === null) return;
-    if (rest <= 0) { haptics.success(); setRest(null); return; }
-    if (rest <= 3) haptics.tap(); // tick the final seconds
+    if (rest <= 0) { if (restAlerts) haptics.success(); setRest(null); return; }
+    if (rest <= 3 && restAlerts) haptics.tap(); // tick the final seconds
     const t = setTimeout(() => setRest(r => (r === null ? null : r - 1)), 1000);
     return () => clearTimeout(t);
-  }, [rest]);
+  }, [rest, restAlerts]);
 
   const finish = (full: boolean) => {
     const completedCount = setsDone.filter(s => s >= SETS_PER).length;

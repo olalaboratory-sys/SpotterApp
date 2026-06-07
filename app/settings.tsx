@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Switch, Alert, ActivityIndicator,
+  View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Switch, Alert, ActivityIndicator, TextInput,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -25,8 +25,10 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, refreshProfile } = useAuth();
 
+  const [name, setName] = useState('');
+  const [savingName, setSavingName] = useState(false);
   const [goal, setGoal] = useState(GOALS[2]);
   const [experience, setExperience] = useState(EXPERIENCE[0]);
   const [units, setUnits] = useState(UNITS[0]);
@@ -42,6 +44,7 @@ export default function SettingsScreen() {
         const snap = await getDoc(doc(db, 'users', user.uid)).catch(() => null);
         const d = snap?.data();
         if (d) {
+          setName(d.displayName ?? '');
           if (d.goal) setGoal(d.goal);
           if (d.experience) setExperience(d.experience);
           if (d.units) setUnits(d.units);
@@ -61,6 +64,17 @@ export default function SettingsScreen() {
       Alert.alert('Saved', 'Your fitness profile is updated.');
     } catch (e: any) { Alert.alert('Error', e.message); }
     finally { setSaving(false); }
+  };
+
+  const saveName = async () => {
+    if (!user || !name.trim()) return;
+    setSavingName(true);
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { displayName: name.trim() });
+      await refreshProfile().catch(() => {});
+      Alert.alert('Saved', 'Your name is updated.');
+    } catch (e: any) { Alert.alert('Error', e.message); }
+    finally { setSavingName(false); }
   };
 
   const saveNotifs = (next: { reminders: boolean; restAlerts: boolean }) => {
@@ -92,6 +106,34 @@ export default function SettingsScreen() {
         </View>
 
         <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 4, gap: 22 }}>
+          <Card title="Account">
+            <Text style={styles.label}>Display name</Text>
+            <View style={styles.nameRow}>
+              <TextInput
+                style={styles.nameInput}
+                value={name}
+                onChangeText={setName}
+                placeholder="Your name"
+                placeholderTextColor={Colors.labelTertiary}
+                returnKeyType="done"
+                onSubmitEditing={saveName}
+              />
+              <TouchableOpacity
+                style={[styles.nameSave, (!name.trim() || name.trim() === (userProfile?.displayName ?? '')) && styles.nameSaveOff]}
+                onPress={saveName}
+                disabled={savingName || !name.trim() || name.trim() === (userProfile?.displayName ?? '')}
+              >
+                {savingName ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.nameSaveText}>Save</Text>}
+              </TouchableOpacity>
+            </View>
+            {!!userProfile?.email && (
+              <View style={[styles.linkRow, styles.rowBorder]}>
+                <View style={styles.linkIcon}><Ionicons name="mail-outline" size={18} color={Colors.greenDeep} /></View>
+                <Text style={[styles.rowLabel, { flex: 1 }]} numberOfLines={1}>{userProfile.email}</Text>
+              </View>
+            )}
+          </Card>
+
           <Card title="Fitness profile">
             <Text style={styles.label}>Main goal</Text>
             <View style={styles.pillWrap}>
@@ -200,6 +242,11 @@ const styles = StyleSheet.create({
   segBtnActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
   segText: { fontSize: 14, fontWeight: '600', color: Colors.labelSecondary },
   segTextActive: { color: Colors.labelPrimary },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  nameInput: { flex: 1, backgroundColor: Colors.cloud, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.separator, paddingHorizontal: 14, paddingVertical: 11, fontSize: 16, color: Colors.labelPrimary },
+  nameSave: { paddingHorizontal: 18, height: 44, borderRadius: 12, backgroundColor: Colors.green, alignItems: 'center', justifyContent: 'center' },
+  nameSaveOff: { backgroundColor: Colors.separator },
+  nameSaveText: { fontSize: 15, fontWeight: '700', color: '#fff' },
   saveBtn: { height: 48, borderRadius: 14, backgroundColor: Colors.green, alignItems: 'center', justifyContent: 'center', marginTop: 18 },
   saveBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
   toggleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
