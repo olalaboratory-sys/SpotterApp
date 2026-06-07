@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Animated } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { useWorkouts } from '../../context/WorkoutsContext';
 import { usePlaces } from '../../context/PlacesContext';
+import * as haptics from '../../lib/haptics';
 
 const FEELINGS = [
   { id: 'easy', label: 'Too easy', icon: 'happy-outline' as const },
@@ -27,8 +28,9 @@ export default function WorkoutComplete() {
   const [feel, setFeel] = useState<string | null>(null);
   const savedRef = useRef(false);
   const workoutIdRef = useRef<string | null>(null);
+  const badgeScale = useRef(new Animated.Value(0.4)).current;
 
-  // Persist the workout exactly once.
+  // Persist the workout exactly once, and celebrate.
   useEffect(() => {
     if (savedRef.current) return;
     savedRef.current = true;
@@ -36,9 +38,12 @@ export default function WorkoutComplete() {
       .then(id => { workoutIdRef.current = id; })
       .catch(() => {});
     markTrained(draft, meta.placeId).catch(() => {});
+    haptics.success();
+    Animated.spring(badgeScale, { toValue: 1, friction: 5, tension: 120, delay: 80, useNativeDriver: true }).start();
   }, []);
 
   const pickFeel = (id: string) => {
+    haptics.tap();
     setFeel(id);
     if (workoutIdRef.current) updateWorkoutFeel(workoutIdRef.current, id).catch(() => {});
   };
@@ -47,9 +52,9 @@ export default function WorkoutComplete() {
     <View style={styles.screen}>
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: 'center' }}>
-          <View style={styles.badge}>
+          <Animated.View style={[styles.badge, { transform: [{ scale: badgeScale }] }]}>
             <Ionicons name={isFull ? 'trophy' : 'checkmark-done'} size={48} color={Colors.ink} />
-          </View>
+          </Animated.View>
           <Text style={styles.title}>{isFull ? 'Workout complete' : 'Workout saved'}</Text>
           <Text style={styles.sub}>
             {isFull ? 'Nice work — you finished every exercise.' : 'Saved your progress. Every bit counts.'}

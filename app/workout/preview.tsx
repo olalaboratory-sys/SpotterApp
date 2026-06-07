@@ -6,6 +6,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../constants/colors';
 import { useWorkouts } from '../../context/WorkoutsContext';
 import { getMachine } from '../../constants/machines';
+import PressableScale from '../../components/PressableScale';
+import * as haptics from '../../lib/haptics';
 
 export default function WorkoutPreview() {
   const router = useRouter();
@@ -37,12 +39,18 @@ export default function WorkoutPreview() {
               const m = getMachine(key);
               return (
                 <View key={key} style={styles.exRow}>
-                  <View style={styles.exNum}><Text style={styles.exNumText}>{i + 1}</Text></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.exName}>{m.name}</Text>
-                    <Text style={styles.exSub}>{m.cat} · 3 sets</Text>
-                  </View>
-                  <TouchableOpacity onPress={() => removeFromDraft(key)} hitSlop={8}>
+                  <TouchableOpacity
+                    style={styles.exMain}
+                    activeOpacity={0.7}
+                    onPress={() => router.push({ pathname: '/guide/[key]', params: { key } })}
+                  >
+                    <View style={styles.exNum}><Text style={styles.exNumText}>{i + 1}</Text></View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.exName}>{m.name}</Text>
+                      <Text style={styles.exSub}>{m.cat} · 3 sets</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => { haptics.tap(); removeFromDraft(key); }} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Remove ${m.name}`}>
                     <Ionicons name="close-circle" size={22} color={Colors.labelTertiary} />
                   </TouchableOpacity>
                 </View>
@@ -55,14 +63,15 @@ export default function WorkoutPreview() {
         </ScrollView>
 
         <View style={styles.footer}>
-          <TouchableOpacity
+          <PressableScale
+            scaleTo={0.98}
             style={[styles.startBtn, draft.length === 0 && { opacity: 0.4 }]}
             disabled={draft.length === 0}
-            onPress={() => router.push('/workout/session')}
+            onPress={() => { haptics.tap(); router.push('/workout/session'); }}
           >
             <Ionicons name="play" size={18} color="#fff" />
             <Text style={styles.startBtnText}>Start workout</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </SafeAreaView>
     </View>
@@ -80,7 +89,8 @@ const styles = StyleSheet.create({
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   metaText: { fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.85)' },
   list: { paddingHorizontal: 20, gap: 10 },
-  exRow: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#fff', borderRadius: 14, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
+  exRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 14, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
+  exMain: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
   exNum: { width: 30, height: 30, borderRadius: 15, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
   exNumText: { fontSize: 14, fontWeight: '700', color: Colors.greenDeep },
   exName: { fontSize: 16, fontWeight: '600', color: Colors.labelPrimary, letterSpacing: -0.2 },
