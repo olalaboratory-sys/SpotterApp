@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Pressable, Alert,
+  View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Pressable, Alert, Animated, Easing,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
@@ -21,6 +21,24 @@ export default function PlacePickerSheet({ visible, onClose }: { visible: boolea
   const [type, setType] = useState<PlaceType>('gym');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+
+  // Keep the modal mounted through the exit animation; fade the backdrop in
+  // place while only the sheet slides up/down.
+  const [show, setShow] = useState(visible);
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      setShow(true);
+      Animated.timing(anim, { toValue: 1, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    } else if (show) {
+      Animated.timing(anim, { toValue: 0, duration: 200, easing: Easing.in(Easing.cubic), useNativeDriver: true }).start(({ finished }) => {
+        if (finished) setShow(false);
+      });
+    }
+  }, [visible]);
+
+  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [600, 0] });
 
   const reset = () => { setCreating(false); setManage(false); setName(''); setType('gym'); setEditingId(null); setEditName(''); };
 
@@ -48,10 +66,13 @@ export default function PlacePickerSheet({ visible, onClose }: { visible: boolea
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
-      <Pressable style={styles.backdrop} onPress={close} />
-      <View style={styles.sheet}>
-        <View style={styles.handle} />
+    <Modal visible={show} transparent animationType="none" statusBarTranslucent onRequestClose={close}>
+      <View style={styles.root}>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: anim }]}>
+          <Pressable style={{ flex: 1 }} onPress={close} />
+        </Animated.View>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
+          <View style={styles.handle} />
         <View style={styles.headerRow}>
           <Text style={styles.title}>{creating ? 'New place' : manage ? 'Manage places' : 'My places'}</Text>
           {!creating && (
@@ -143,13 +164,15 @@ export default function PlacePickerSheet({ visible, onClose }: { visible: boolea
             )}
           </>
         )}
+        </Animated.View>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(6,12,9,0.4)' },
+  root: { flex: 1, justifyContent: 'flex-end' },
+  backdrop: { backgroundColor: 'rgba(6,12,9,0.45)' },
   sheet: { backgroundColor: Colors.cloud, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 20, paddingBottom: 40, gap: 8 },
   handle: { width: 38, height: 5, borderRadius: 3, backgroundColor: '#d9d9de', alignSelf: 'center', marginBottom: 10 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
