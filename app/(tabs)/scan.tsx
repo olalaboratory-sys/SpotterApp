@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, SafeAreaView,
+  View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, SafeAreaView, Easing, Linking,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
@@ -52,14 +52,21 @@ function ScanScreen({ onCapture, onUpload, onClose }: { onCapture: () => void; o
   const [flash, setFlash] = useState(false);
 
   if (!permission?.granted) {
+    // Undetermined → in-app prompt; permanently denied → deep link to Settings.
+    const denied = permission != null && !permission.canAskAgain;
     return (
-      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center', gap: 20 }]}>
+      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center', gap: 16, paddingHorizontal: 40 }]}>
         <Ionicons name="camera-outline" size={64} color={Colors.lime} />
-        <Text style={{ color: '#fff', fontSize: 20, fontWeight: '600', textAlign: 'center', paddingHorizontal: 40 }}>
+        <Text style={{ color: '#fff', fontSize: 20, fontWeight: '700', textAlign: 'center' }}>
           Camera access needed to scan machines
         </Text>
-        <TouchableOpacity style={styles.btnLime} onPress={requestPermission}>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: Colors.ink }}>Allow Camera</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15, textAlign: 'center', lineHeight: 21 }}>
+          {denied
+            ? 'Camera access is off. Turn it on in Settings, or upload a photo instead.'
+            : 'We only use the camera to identify the machine in front of you — photos aren’t stored.'}
+        </Text>
+        <TouchableOpacity style={styles.btnLime} onPress={denied ? () => Linking.openSettings() : requestPermission}>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: Colors.ink }}>{denied ? 'Open Settings' : 'Allow Camera'}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.uploadInstead} onPress={onUpload}>
           <Ionicons name="image-outline" size={18} color="#fff" />
@@ -113,14 +120,20 @@ function ScanScreen({ onCapture, onUpload, onClose }: { onCapture: () => void; o
 
 function LoadingScreen() {
   const [msgIdx, setMsgIdx] = useState(0);
+  const spin = React.useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const t = setInterval(() => setMsgIdx(i => Math.min(i + 1, LOADING_MESSAGES.length - 1)), 600);
-    return () => clearInterval(t);
+    const loop = Animated.loop(
+      Animated.timing(spin, { toValue: 1, duration: 800, easing: Easing.linear, useNativeDriver: true }),
+    );
+    loop.start();
+    return () => { clearInterval(t); loop.stop(); };
   }, []);
+  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   return (
     <View style={[styles.container, { alignItems: 'center', justifyContent: 'flex-end' }]}>
       <View style={{ height: 200, alignItems: 'center', gap: 18, marginBottom: 80 }}>
-        <Animated.View style={styles.spinner} />
+        <Animated.View style={[styles.spinner, { transform: [{ rotate }] }]} />
         <Text style={{ fontSize: 17, fontWeight: '600', color: '#fff', textAlign: 'center', paddingHorizontal: 40 }}>
           {LOADING_MESSAGES[msgIdx]}
         </Text>

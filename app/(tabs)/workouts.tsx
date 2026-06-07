@@ -96,13 +96,13 @@ export default function WorkoutsTab() {
         <View style={styles.header}><Text style={styles.title}>Workouts</Text></View>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
           <View style={styles.section}>
-            <TouchableOpacity style={styles.buildCard} activeOpacity={0.9} onPress={() => router.push('/workout/builder')}>
+            <PressableScale style={styles.buildCard} scaleTo={0.98} onPress={() => router.push('/workout/builder')}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.buildTitle}>Build a workout</Text>
                 <Text style={styles.buildSub}>Choose goal, time, and machines</Text>
               </View>
               <View style={styles.buildIcon}><Ionicons name="add" size={28} color={Colors.green} /></View>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
 
           {recommended.length > 0 && (
