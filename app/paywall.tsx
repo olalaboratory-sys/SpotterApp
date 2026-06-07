@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
-  ScrollView, NativeScrollEvent, NativeSyntheticEvent, ActivityIndicator, Alert,
+  ScrollView, NativeScrollEvent, NativeSyntheticEvent, ActivityIndicator, Alert, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,28 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 import { purchasePlan, restorePurchases, PlanId } from '../lib/purchases';
+import PressableScale from '../components/PressableScale';
+import * as haptics from '../lib/haptics';
+
+/** A benefit row that fades + slides in on mount, staggered by index. */
+function BenefitRow({ icon, title, sub, index }: { icon: keyof typeof Ionicons.glyphMap; title: string; sub: string; index: number }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(anim, { toValue: 1, duration: 380, delay: 120 + index * 90, useNativeDriver: true }).start();
+  }, []);
+  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] });
+  return (
+    <Animated.View style={[styles.benefitRow, { opacity: anim, transform: [{ translateY }] }]}>
+      <View style={styles.benefitIcon}>
+        <Ionicons name={icon} size={18} color={Colors.lime} />
+      </View>
+      <View style={styles.benefitText}>
+        <Text style={styles.benefitTitle}>{title}</Text>
+        <Text style={styles.benefitSub}>{sub}</Text>
+      </View>
+    </Animated.View>
+  );
+}
 
 const PLANS = [
   { id: 'monthly', name: 'Monthly', price: '$2.99', per: '/mo', sub: 'Billed monthly', trial: true },
@@ -110,16 +132,8 @@ export default function PaywallScreen() {
 
           {/* Benefits */}
           <View style={styles.benefits}>
-            {BENEFITS.map(b => (
-              <View key={b.title} style={styles.benefitRow}>
-                <View style={styles.benefitIcon}>
-                  <Ionicons name={b.icon} size={18} color={Colors.lime} />
-                </View>
-                <View style={styles.benefitText}>
-                  <Text style={styles.benefitTitle}>{b.title}</Text>
-                  <Text style={styles.benefitSub}>{b.sub}</Text>
-                </View>
-              </View>
+            {BENEFITS.map((b, i) => (
+              <BenefitRow key={b.title} icon={b.icon} title={b.title} sub={b.sub} index={i} />
             ))}
           </View>
 
@@ -147,11 +161,11 @@ export default function PaywallScreen() {
             {PLANS.map(p => {
               const on = plan === p.id;
               return (
-                <TouchableOpacity
+                <PressableScale
                   key={p.id}
+                  scaleTo={0.98}
                   style={[styles.planCard, on && styles.planCardSelected]}
-                  onPress={() => setPlan(p.id)}
-                  activeOpacity={0.85}
+                  onPress={() => { if (!on) haptics.tap(); setPlan(p.id); }}
                 >
                   {p.badge && (
                     <View style={styles.planBadge}>
@@ -175,7 +189,7 @@ export default function PaywallScreen() {
                       <Text style={styles.planPer}>{p.per}</Text>
                     </View>
                   </View>
-                </TouchableOpacity>
+                </PressableScale>
               );
             })}
           </View>

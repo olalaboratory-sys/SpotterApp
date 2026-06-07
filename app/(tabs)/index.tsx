@@ -9,6 +9,7 @@ import { Colors } from '../../constants/colors';
 import { iconForKey } from '../../constants/machineIcon';
 import { allMachines } from '../../constants/machines';
 import { workoutStreak } from '../../lib/streak';
+import { useCountUp } from '../../lib/useCountUp';
 import Skeleton from '../../components/Skeleton';
 import PressableScale from '../../components/PressableScale';
 
@@ -44,6 +45,10 @@ export default function HomeScreen() {
 
   const firstName = userProfile?.displayName?.split(' ')[0] ?? 'there';
   const streak = useMemo(() => workoutStreak(history.map(w => w.createdAt)), [history]);
+
+  const savedCount = useCountUp(saved.length);
+  const workoutCount = useCountUp(history.length);
+  const confidentCount = useCountUp(saved.filter(s => s.status === 'Comfortable').length);
 
   const lastWorkout = history[0];
   const repeatLast = () => {
@@ -184,9 +189,9 @@ export default function HomeScreen() {
             <SectionHead title="Your progress" action="Details" onAction={() => router.push('/progress')} />
             <View style={styles.progressGrid}>
               {[
-                { n: String(saved.length), label: 'machines\nsaved', icon: 'locate-outline' as const },
-                { n: String(history.length), label: 'workouts\ndone', icon: 'barbell-outline' as const },
-                { n: String(saved.filter(s => s.status === 'Comfortable').length), label: 'confident\nwith', icon: 'shield-checkmark-outline' as const },
+                { n: savedCount, label: 'machines\nsaved', icon: 'locate-outline' as const },
+                { n: workoutCount, label: 'workouts\ndone', icon: 'barbell-outline' as const },
+                { n: confidentCount, label: 'confident\nwith', icon: 'shield-checkmark-outline' as const },
               ].map(p => (
                 <View key={p.label} style={styles.progressCard}>
                   <Ionicons name={p.icon} size={19} color={Colors.green} />

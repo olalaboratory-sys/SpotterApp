@@ -7,6 +7,7 @@ import { useAuth, getDaysLeftInTrial } from '../../context/AuthContext';
 import { usePlaces } from '../../context/PlacesContext';
 import { useWorkouts } from '../../context/WorkoutsContext';
 import { workoutStreak } from '../../lib/streak';
+import { useCountUp } from '../../lib/useCountUp';
 import PressableScale from '../../components/PressableScale';
 
 const SETTINGS: { icon: keyof typeof Ionicons.glyphMap; label: string; sub: string; route: string }[] = [
@@ -26,6 +27,8 @@ export default function ProfileTab() {
   const daysLeft = getDaysLeftInTrial(userProfile?.trialStartedAt ?? null);
   const isTrialActive = userProfile?.subscriptionStatus === 'trial' && daysLeft > 0;
   const streak = workoutStreak(history.map(w => w.createdAt));
+  const savedCount = useCountUp(saved.length);
+  const workoutCount = useCountUp(history.length);
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -89,8 +92,8 @@ export default function ProfileTab() {
             <Text style={styles.sectionTitle}>Activity</Text>
             <View style={styles.progressRow}>
               {[
-                { n: String(saved.length), l: 'machines saved' },
-                { n: String(history.length), l: 'workouts done' },
+                { n: String(savedCount), l: 'machines saved' },
+                { n: String(workoutCount), l: 'workouts done' },
                 { n: streak > 0 ? `${streak}d` : '—', l: 'day streak' },
               ].map(p => (
                 <View key={p.l} style={styles.statCard}>
