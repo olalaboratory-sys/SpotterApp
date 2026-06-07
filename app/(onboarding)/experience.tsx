@@ -34,9 +34,13 @@ export default function ExperienceScreen() {
     <View style={styles.screen}>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={20} color={Colors.labelPrimary} />
-          </TouchableOpacity>
+          {router.canGoBack() ? (
+            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
+              <Ionicons name="chevron-back" size={20} color={Colors.labelPrimary} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.backBtn} />
+          )}
           <StepDots total={4} current={1} />
         </View>
 

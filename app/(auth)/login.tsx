@@ -83,6 +83,9 @@ export default function LoginScreen() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <View style={styles.logoWrap}>
+              <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
+                <Ionicons name="chevron-back" size={20} color={Colors.labelPrimary} />
+              </TouchableOpacity>
               <View style={styles.logoIcon}>
                 <Ionicons name="scan-outline" size={26} color={Colors.ink} />
               </View>
@@ -169,6 +172,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F4F6F0' },
   scroll: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 40 },
   logoWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 36 },
+  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4 },
   logoIcon: { width: 40, height: 40, borderRadius: 11, backgroundColor: Colors.lime, alignItems: 'center', justifyContent: 'center' },
   logoText: { fontSize: 22, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.5 },
   title: { fontSize: 30, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.6, marginBottom: 6 },

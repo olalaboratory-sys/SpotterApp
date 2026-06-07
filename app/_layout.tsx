@@ -22,13 +22,13 @@ function RootNavigator() {
     const onPaywall = group === 'paywall';
 
     if (!user) {
-      if (!inAuth) router.replace('/(auth)/login');
+      if (!inAuth) router.replace('/(auth)/welcome');
       return;
     }
 
     if (!userProfile?.onboardingCompleted) {
       // Allow the onboarding flow and the paywall (which completes onboarding).
-      if (!inOnboarding && !onPaywall) router.replace('/(onboarding)/welcome');
+      if (!inOnboarding && !onPaywall) router.replace('/(onboarding)/experience');
       return;
     }
 
