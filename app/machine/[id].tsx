@@ -7,6 +7,7 @@ import { Colors } from '../../constants/colors';
 import { usePlaces } from '../../context/PlacesContext';
 import { getMachine } from '../../constants/machines';
 import { iconForKey } from '../../constants/machineIcon';
+import * as haptics from '../../lib/haptics';
 
 export default function SavedMachineDetail() {
   const router = useRouter();
@@ -71,7 +72,7 @@ export default function SavedMachineDetail() {
                 <TouchableOpacity
                   key={s.id}
                   style={[styles.statusPill, on && styles.statusPillOn]}
-                  onPress={() => setStatus(entry.key, s.id, entry.placeId)}
+                  onPress={() => { if (!on) { haptics.tap(); setStatus(entry.key, s.id, entry.placeId); } }}
                 >
                   <Text style={[styles.statusPillText, on && styles.statusPillTextOn]}>{s.label}</Text>
                 </TouchableOpacity>

@@ -86,7 +86,7 @@ export default function GuideScreen() {
 
   const onToggleSave = () => {
     haptics.tap();
-    toggle(machineKey, 'Comfortable');
+    toggle(machineKey, 'Added');
   };
 
   const dropPhoto = async () => {
@@ -96,7 +96,7 @@ export default function GuideScreen() {
     setLocalPhoto(uri);
     if (current) {
       // Make sure it's saved, then attach the photo to the saved copy.
-      if (!isSaved(machineKey, current.id)) await saveTo(current.id, machineKey, 'Comfortable');
+      if (!isSaved(machineKey, current.id)) await saveTo(current.id, machineKey, 'Added');
       await setPhoto(machineKey, uri, current.id);
     }
   };
