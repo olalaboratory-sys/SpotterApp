@@ -14,6 +14,7 @@ import {
   doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
+import { normalizeExperience, normalizeGoals } from '../constants/profile';
 
 export type UserProfile = {
   uid: string;
@@ -25,6 +26,8 @@ export type UserProfile = {
   subscriptionStatus: 'none' | 'trial' | 'active' | 'expired';
   machinesCount: number;
   workoutsCount: number;
+  experienceLevel: string | null;
+  goals: string[];
   createdAt: Date | null;
 };
 
@@ -59,6 +62,8 @@ async function fetchOrCreateProfile(user: FirebaseUser): Promise<UserProfile> {
       subscriptionStatus: data.subscriptionStatus ?? 'none',
       machinesCount: data.machinesCount ?? 0,
       workoutsCount: data.workoutsCount ?? 0,
+      experienceLevel: normalizeExperience(data),
+      goals: normalizeGoals(data),
       createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : null,
     };
   }
@@ -73,6 +78,8 @@ async function fetchOrCreateProfile(user: FirebaseUser): Promise<UserProfile> {
     subscriptionStatus: 'none' as const,
     machinesCount: 0,
     workoutsCount: 0,
+    experienceLevel: null,
+    goals: [] as string[],
     createdAt: serverTimestamp(),
   };
   await setDoc(ref, newProfile);

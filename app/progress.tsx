@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { usePlaces } from '../context/PlacesContext';
 import { useWorkouts } from '../context/WorkoutsContext';
+import { useAuth } from '../context/AuthContext';
+import { labelForGoal, labelForExperience } from '../constants/profile';
 import GoalRing from '../components/GoalRing';
 
 const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -14,6 +16,9 @@ export default function ProgressScreen() {
   const router = useRouter();
   const { saved } = usePlaces();
   const { history } = useWorkouts();
+  const { userProfile } = useAuth();
+  const goals = userProfile?.goals ?? [];
+  const hasActivity = saved.length > 0 || history.length > 0;
 
   // Workouts per weekday for the current week (Mon–Sun).
   const weekly = useMemo(() => {
@@ -57,6 +62,36 @@ export default function ProgressScreen() {
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20, paddingTop: 4, gap: 24 }}>
+          {!hasActivity && (
+            <View style={styles.ctaCard}>
+              <Ionicons name="rocket-outline" size={28} color={Colors.greenDeep} />
+              <Text style={styles.ctaTitle}>Let's get your first win</Text>
+              <Text style={styles.ctaSub}>Scan or add a machine, then build a quick workout. Your progress shows up here.</Text>
+              <View style={styles.ctaRow}>
+                <TouchableOpacity style={styles.ctaBtn} onPress={() => router.push('/(tabs)/scan')}>
+                  <Text style={styles.ctaBtnText}>Scan a machine</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.ctaBtn, styles.ctaBtnAlt]} onPress={() => router.push('/workout/builder')}>
+                  <Text style={[styles.ctaBtnText, { color: Colors.greenDeep }]}>Build workout</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {goals.length > 0 && (
+            <View>
+              <Text style={styles.sectionTitle}>Your focus</Text>
+              <View style={styles.focusCard}>
+                <Text style={styles.focusExp}>{labelForExperience(userProfile?.experienceLevel ?? null)} · {goals.length} goal{goals.length === 1 ? '' : 's'}</Text>
+                <View style={styles.focusChips}>
+                  {goals.map(g => (
+                    <View key={g} style={styles.focusChip}><Text style={styles.focusChipText}>{labelForGoal(g)}</Text></View>
+                  ))}
+                </View>
+              </View>
+            </View>
+          )}
+
           <View style={styles.statRow}>
             <View style={styles.statCard}><Text style={styles.statNum}>{saved.length}</Text><Text style={styles.statLabel}>machines{'\n'}learned</Text></View>
             <View style={styles.statCard}><Text style={styles.statNum}>{history.length}</Text><Text style={styles.statLabel}>workouts{'\n'}done</Text></View>
@@ -137,6 +172,18 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 6 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 28, fontWeight: '700', letterSpacing: -0.4, color: Colors.labelPrimary },
+  ctaCard: { backgroundColor: Colors.mist, borderRadius: 18, padding: 20, gap: 8, alignItems: 'flex-start' },
+  ctaTitle: { fontSize: 18, fontWeight: '700', color: Colors.greenInk, letterSpacing: -0.3 },
+  ctaSub: { fontSize: 14, color: Colors.greenInk, opacity: 0.85, lineHeight: 20 },
+  ctaRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  ctaBtn: { paddingHorizontal: 16, height: 42, borderRadius: 12, backgroundColor: Colors.green, alignItems: 'center', justifyContent: 'center' },
+  ctaBtnAlt: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: Colors.green },
+  ctaBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  focusCard: { backgroundColor: '#fff', borderRadius: 18, padding: 16, gap: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
+  focusExp: { fontSize: 13, fontWeight: '600', color: Colors.labelSecondary },
+  focusChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  focusChip: { backgroundColor: Colors.mist2, borderRadius: 100, paddingHorizontal: 12, paddingVertical: 6 },
+  focusChipText: { fontSize: 13, fontWeight: '600', color: Colors.greenInk },
   statRow: { flexDirection: 'row', gap: 12 },
   statCard: { flex: 1, backgroundColor: '#fff', borderRadius: 18, padding: 16, gap: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
   statNum: { fontSize: 26, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.6 },

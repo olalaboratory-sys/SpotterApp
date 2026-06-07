@@ -9,9 +9,8 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Colors } from '../constants/colors';
 import { useAuth, getDaysLeftInTrial } from '../context/AuthContext';
 import { db } from '../lib/firebase';
+import { EXPERIENCE_OPTIONS, GOAL_OPTIONS, normalizeExperience, normalizeGoals } from '../constants/profile';
 
-const GOALS = ['Build strength', 'Lose weight', 'Feel confident', 'Stay active'];
-const EXPERIENCE = ['New', 'Some', 'Confident'];
 const UNITS = ['kg', 'lb'];
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
@@ -29,8 +28,8 @@ export default function SettingsScreen() {
 
   const [name, setName] = useState('');
   const [savingName, setSavingName] = useState(false);
-  const [goal, setGoal] = useState(GOALS[2]);
-  const [experience, setExperience] = useState(EXPERIENCE[0]);
+  const [goals, setGoals] = useState<string[]>([]);
+  const [experienceLevel, setExperienceLevel] = useState<string | null>(null);
   const [units, setUnits] = useState(UNITS[0]);
   const [reminders, setReminders] = useState(true);
   const [restAlerts, setRestAlerts] = useState(true);
@@ -45,8 +44,8 @@ export default function SettingsScreen() {
         const d = snap?.data();
         if (d) {
           setName(d.displayName ?? '');
-          if (d.goal) setGoal(d.goal);
-          if (d.experience) setExperience(d.experience);
+          setExperienceLevel(normalizeExperience(d));
+          setGoals(normalizeGoals(d));
           if (d.units) setUnits(d.units);
         }
       }
@@ -56,11 +55,14 @@ export default function SettingsScreen() {
     })();
   }, [user]);
 
+  const toggleGoal = (id: string) =>
+    setGoals(g => (g.includes(id) ? g.filter(x => x !== id) : [...g, id]));
+
   const saveProfile = async () => {
     if (!user) return;
     setSaving(true);
     try {
-      await updateDoc(doc(db, 'users', user.uid), { goal, experience, units });
+      await updateDoc(doc(db, 'users', user.uid), { experienceLevel, goals, units });
       Alert.alert('Saved', 'Your fitness profile is updated.');
     } catch (e: any) { Alert.alert('Error', e.message); }
     finally { setSaving(false); }
@@ -135,21 +137,27 @@ export default function SettingsScreen() {
           </Card>
 
           <Card title="Fitness profile">
-            <Text style={styles.label}>Main goal</Text>
+            <Text style={styles.label}>Goals</Text>
             <View style={styles.pillWrap}>
-              {GOALS.map(g => (
-                <TouchableOpacity key={g} style={[styles.pill, goal === g && styles.pillActive]} onPress={() => setGoal(g)}>
-                  <Text style={[styles.pillText, goal === g && styles.pillTextActive]}>{g}</Text>
-                </TouchableOpacity>
-              ))}
+              {GOAL_OPTIONS.map(g => {
+                const on = goals.includes(g.id);
+                return (
+                  <TouchableOpacity key={g.id} style={[styles.pill, on && styles.pillActive]} onPress={() => toggleGoal(g.id)}>
+                    <Text style={[styles.pillText, on && styles.pillTextActive]}>{g.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
             <Text style={styles.label}>Experience</Text>
-            <View style={styles.segment}>
-              {EXPERIENCE.map(e => (
-                <TouchableOpacity key={e} style={[styles.segBtn, experience === e && styles.segBtnActive]} onPress={() => setExperience(e)}>
-                  <Text style={[styles.segText, experience === e && styles.segTextActive]}>{e}</Text>
-                </TouchableOpacity>
-              ))}
+            <View style={styles.pillWrap}>
+              {EXPERIENCE_OPTIONS.map(e => {
+                const on = experienceLevel === e.id;
+                return (
+                  <TouchableOpacity key={e.id} style={[styles.pill, on && styles.pillActive]} onPress={() => setExperienceLevel(e.id)}>
+                    <Text style={[styles.pillText, on && styles.pillTextActive]}>{e.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
             <Text style={styles.label}>Units</Text>
             <View style={styles.segment}>
