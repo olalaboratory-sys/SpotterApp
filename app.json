@@ -7,8 +7,10 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "sdkVersion": "52.0.0",
     "ios": {
       "supportsTablet": false,
+      "bundleIdentifier": "com.spotterapp.spotter",
       "infoPlist": {
         "NSCameraUsageDescription": "Spotter needs camera access to scan gym machines.",
         "NSPhotoLibraryUsageDescription": "Spotter needs photo library access to upload images of gym machines."
@@ -16,8 +18,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0C0F16",
-        "foregroundImage": "./assets/icon.png"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0C0F16"
       },
       "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"]
     },
@@ -33,6 +35,9 @@
           "cameraPermission": "Allow Spotter to access your camera to scan gym machines."
         }
       ]
-    ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }
