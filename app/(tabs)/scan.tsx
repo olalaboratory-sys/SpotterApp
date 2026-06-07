@@ -1,14 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, SafeAreaView,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
+import { iconForIllo } from '../../constants/machineIcon';
+import * as haptics from '../../lib/haptics';
+import { getMachine } from '../../constants/machines';
+import { analyzePhoto, MatchResult } from '../../lib/recognition';
+import { usePlaces } from '../../context/PlacesContext';
 
 const { width, height } = Dimensions.get('window');
-type Phase = 'ready' | 'scanning' | 'loading' | 'result';
+type Phase = 'ready' | 'loading' | 'result';
 
 const LOADING_MESSAGES = [
   "Looking for the machine's shape…",
@@ -17,23 +23,33 @@ const LOADING_MESSAGES = [
 ];
 
 function ScanCorners() {
-  const lime = Colors.lime;
+  const y = React.useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(y, { toValue: 1, duration: 1600, useNativeDriver: true }),
+        Animated.timing(y, { toValue: 0, duration: 1600, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [y]);
+  const translateY = y.interpolate({ inputRange: [0, 1], outputRange: [6, 262] });
   return (
     <View style={styles.scanFrame}>
-      {/* TL */ }
       <View style={[styles.corner, { top: -2, left: -2, borderTopWidth: 3.5, borderLeftWidth: 3.5, borderTopLeftRadius: 14 }]} />
-      {/* TR */}
       <View style={[styles.corner, { top: -2, right: -2, borderTopWidth: 3.5, borderRightWidth: 3.5, borderTopRightRadius: 14 }]} />
-      {/* BL */}
       <View style={[styles.corner, { bottom: -2, left: -2, borderBottomWidth: 3.5, borderLeftWidth: 3.5, borderBottomLeftRadius: 14 }]} />
-      {/* BR */}
       <View style={[styles.corner, { bottom: -2, right: -2, borderBottomWidth: 3.5, borderRightWidth: 3.5, borderBottomRightRadius: 14 }]} />
+      <Animated.View style={[styles.scanline, { transform: [{ translateY }] }]} />
     </View>
   );
 }
 
-function ScanScreen({ onCapture, onClose }: { onCapture: () => void; onClose: () => void }) {
+function ScanScreen({ onCapture, onUpload, onClose }: { onCapture: () => void; onUpload: () => void; onClose: () => void }) {
   const [permission, requestPermission] = useCameraPermissions();
+  const [facing, setFacing] = useState<'back' | 'front'>('back');
+  const [flash, setFlash] = useState(false);
 
   if (!permission?.granted) {
     return (
@@ -45,31 +61,32 @@ function ScanScreen({ onCapture, onClose }: { onCapture: () => void; onClose: ()
         <TouchableOpacity style={styles.btnLime} onPress={requestPermission}>
           <Text style={{ fontSize: 16, fontWeight: '600', color: Colors.ink }}>Allow Camera</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.uploadInstead} onPress={onUpload}>
+          <Ionicons name="image-outline" size={18} color="#fff" />
+          <Text style={{ color: '#fff', fontSize: 15, fontWeight: '500' }}>Upload a photo instead</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <CameraView style={StyleSheet.absoluteFill} facing="back" />
+      <CameraView style={StyleSheet.absoluteFill} facing={facing} enableTorch={flash} />
       <View style={styles.vignette} />
       <SafeAreaView style={{ flex: 1 }}>
-        {/* Top bar */}
         <View style={styles.topBar}>
           <TouchableOpacity style={styles.circleBtn} onPress={onClose}>
             <Ionicons name="close" size={20} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.topTitle}>Scan machine</Text>
-          <TouchableOpacity style={styles.circleBtn}>
-            <Ionicons name="flash-outline" size={19} color="#fff" />
+          <TouchableOpacity style={[styles.circleBtn, flash && styles.circleBtnActive]} onPress={() => setFlash(f => !f)}>
+            <Ionicons name={flash ? 'flash' : 'flash-outline'} size={19} color={flash ? Colors.ink : '#fff'} />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
 
-      {/* Scan frame with corners */}
       <ScanCorners />
 
-      {/* Hint pill */}
       <View style={styles.hintWrap}>
         <View style={styles.hint}>
           <Ionicons name="locate-outline" size={16} color={Colors.lime} />
@@ -77,15 +94,14 @@ function ScanScreen({ onCapture, onClose }: { onCapture: () => void; onClose: ()
         </View>
       </View>
 
-      {/* Bottom controls */}
       <View style={styles.controls}>
-        <TouchableOpacity style={styles.sideBtn}>
+        <TouchableOpacity style={styles.sideBtn} onPress={onUpload}>
           <Ionicons name="image-outline" size={20} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.captureBtn} onPress={onCapture}>
           <View style={styles.captureBtnInner} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.sideBtn}>
+        <TouchableOpacity style={styles.sideBtn} onPress={() => setFacing(f => (f === 'back' ? 'front' : 'back'))}>
           <Ionicons name="camera-reverse-outline" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -95,13 +111,12 @@ function ScanScreen({ onCapture, onClose }: { onCapture: () => void; onClose: ()
   );
 }
 
-function LoadingScreen({ onClose }: { onClose: () => void }) {
+function LoadingScreen() {
   const [msgIdx, setMsgIdx] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setMsgIdx(i => Math.min(i + 1, LOADING_MESSAGES.length - 1)), 950);
+    const t = setInterval(() => setMsgIdx(i => Math.min(i + 1, LOADING_MESSAGES.length - 1)), 600);
     return () => clearInterval(t);
   }, []);
-
   return (
     <View style={[styles.container, { alignItems: 'center', justifyContent: 'flex-end' }]}>
       <View style={{ height: 200, alignItems: 'center', gap: 18, marginBottom: 80 }}>
@@ -119,8 +134,14 @@ function LoadingScreen({ onClose }: { onClose: () => void }) {
   );
 }
 
-function ResultSheet({ onViewGuide, onClose, onRetake }: { onViewGuide: () => void; onClose: () => void; onRetake: () => void }) {
+function ResultSheet({ result, onViewGuide, onRetake, onManual }: {
+  result: MatchResult;
+  onViewGuide: (key: string) => void;
+  onRetake: () => void;
+  onManual: () => void;
+}) {
   const [showAlts, setShowAlts] = useState(false);
+  const top = getMachine(result.top.key);
   return (
     <View style={[styles.container, { justifyContent: 'flex-end' }]}>
       <View style={styles.dimOverlay} />
@@ -128,20 +149,16 @@ function ResultSheet({ onViewGuide, onClose, onRetake }: { onViewGuide: () => vo
         <View style={styles.resultSheet}>
           <View style={styles.resultHandle} />
           <View style={styles.resultConfidence}>
-            <View style={styles.checkCircle}>
-              <Ionicons name="checkmark" size={13} color="#fff" />
-            </View>
-            <Text style={styles.confidenceText}>High confidence match · 96%</Text>
+            <View style={styles.checkCircle}><Ionicons name="checkmark" size={13} color="#fff" /></View>
+            <Text style={styles.confidenceText}>High confidence match · {result.top.confidence}%</Text>
           </View>
           <View style={styles.resultMachine}>
-            <View style={styles.resultImage}>
-              <Ionicons name="barbell-outline" size={48} color={Colors.green} />
-            </View>
+            <View style={styles.resultImage}><Ionicons name={iconForIllo(top.illo)} size={48} color={Colors.green} /></View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.resultName}>Lat Pulldown</Text>
+              <Text style={styles.resultName}>{top.name}</Text>
               <View style={{ flexDirection: 'row', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                <View style={styles.chip}><Text style={styles.chipText}>Back · Lats</Text></View>
-                <View style={[styles.chip, styles.chipLime]}><Text style={[styles.chipText, { color: '#0a1f12' }]}>Beginner-friendly</Text></View>
+                <View style={styles.chip}><Text style={styles.chipText}>{top.cat}</Text></View>
+                {top.beginner && <View style={[styles.chip, styles.chipLime]}><Text style={[styles.chipText, { color: '#0a1f12' }]}>Beginner-friendly</Text></View>}
               </View>
             </View>
           </View>
@@ -153,16 +170,26 @@ function ResultSheet({ onViewGuide, onClose, onRetake }: { onViewGuide: () => vo
           ) : (
             <View style={{ marginVertical: 16, gap: 8 }}>
               <Text style={{ fontSize: 13, color: Colors.labelSecondary, marginBottom: 2 }}>Other possible matches</Text>
-              {['Seated Cable Row', 'Assisted Pull-Up'].map(n => (
-                <TouchableOpacity key={n} style={styles.altCard} onPress={onViewGuide}>
-                  <View style={styles.altIcon}><Ionicons name="barbell-outline" size={18} color={Colors.greenDeep} /></View>
-                  <Text style={{ flex: 1, fontSize: 15, fontWeight: '600', color: Colors.labelPrimary }}>{n}</Text>
-                  <Ionicons name="chevron-forward" size={18} color={Colors.labelTertiary} />
-                </TouchableOpacity>
-              ))}
+              {result.alternatives.map(a => {
+                const m = getMachine(a.key);
+                return (
+                  <TouchableOpacity key={a.key} style={styles.altCard} onPress={() => onViewGuide(a.key)}>
+                    <View style={styles.altIcon}><Ionicons name={iconForIllo(m.illo)} size={18} color={Colors.greenDeep} /></View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.labelPrimary }}>{m.name}</Text>
+                      <Text style={{ fontSize: 12, color: Colors.labelSecondary }}>{m.cat}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={Colors.labelTertiary} />
+                  </TouchableOpacity>
+                );
+              })}
+              <TouchableOpacity style={styles.manualRow} onPress={onManual}>
+                <Ionicons name="add-circle-outline" size={18} color={Colors.greenDeep} />
+                <Text style={styles.manualText}>None of these — add it manually</Text>
+              </TouchableOpacity>
             </View>
           )}
-          <TouchableOpacity style={styles.viewGuideBtn} onPress={onViewGuide}>
+          <TouchableOpacity style={styles.viewGuideBtn} onPress={() => onViewGuide(result.top.key)}>
             <Ionicons name="arrow-forward" size={19} color="#fff" style={{ marginRight: 8 }} />
             <Text style={styles.viewGuideBtnText}>View beginner guide</Text>
           </TouchableOpacity>
@@ -177,23 +204,44 @@ function ResultSheet({ onViewGuide, onClose, onRetake }: { onViewGuide: () => vo
 
 export default function ScanTab() {
   const router = useRouter();
+  const { current, saveTo } = usePlaces();
   const [phase, setPhase] = useState<Phase>('ready');
+  const [result, setResult] = useState<MatchResult | null>(null);
 
-  const capture = () => {
-    setPhase('scanning');
-    setTimeout(() => setPhase('loading'), 1100);
-    setTimeout(() => setPhase('result'), 3900);
+  const runAnalysis = async (uri?: string) => {
+    setPhase('loading');
+    const r = await analyzePhoto(uri);
+    setResult(r);
+    setPhase('result');
+    if (r.top.confidence >= 70) haptics.success();
+    else haptics.warn();
   };
 
-  const close = () => setPhase('ready');
-  const viewGuide = () => {
+  const upload = async () => {
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+    if (!res.canceled && res.assets[0]) runAnalysis(res.assets[0].uri);
+  };
+
+  const viewGuide = (key: string) => {
+    // Save the recognized machine into the current place as "Scanned".
+    if (current) saveTo(current.id, key, 'Scanned').catch(() => {});
     setPhase('ready');
-    router.push({ pathname: '/guide/[key]', params: { key: 'lat' } });
+    setResult(null);
+    router.push({ pathname: '/guide/[key]', params: { key } });
   };
 
-  if (phase === 'loading') return <LoadingScreen onClose={close} />;
-  if (phase === 'result') return <ResultSheet onViewGuide={viewGuide} onClose={close} onRetake={() => setPhase('ready')} />;
-  return <ScanScreen onCapture={capture} onClose={close} />;
+  if (phase === 'loading') return <LoadingScreen />;
+  if (phase === 'result' && result) {
+    return (
+      <ResultSheet
+        result={result}
+        onViewGuide={viewGuide}
+        onRetake={() => { setPhase('ready'); setResult(null); }}
+        onManual={() => { setPhase('ready'); setResult(null); router.push('/add-machine'); }}
+      />
+    );
+  }
+  return <ScanScreen onCapture={() => runAnalysis()} onUpload={upload} onClose={() => router.push('/(tabs)')} />;
 }
 
 const styles = StyleSheet.create({
@@ -202,13 +250,10 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingTop: 4 },
   topTitle: { fontSize: 16, fontWeight: '600', color: '#fff' },
   circleBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
-  scanFrame: {
-    position: 'absolute',
-    width: 272, height: 272,
-    top: '44%', left: '50%',
-    transform: [{ translateX: -136 }, { translateY: -136 }],
-  },
+  circleBtnActive: { backgroundColor: Colors.lime },
+  scanFrame: { position: 'absolute', width: 272, height: 272, top: '44%', left: '50%', transform: [{ translateX: -136 }, { translateY: -136 }] },
   corner: { position: 'absolute', width: 46, height: 46, borderColor: Colors.lime },
+  scanline: { position: 'absolute', left: 6, right: 6, height: 2, borderRadius: 2, backgroundColor: Colors.lime, shadowColor: Colors.lime, shadowOpacity: 0.8, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
   hintWrap: { position: 'absolute', bottom: 180, left: 0, right: 0, alignItems: 'center' },
   hint: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 38, paddingHorizontal: 16, borderRadius: 19, backgroundColor: 'rgba(6,14,10,0.7)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   hintText: { fontSize: 14, fontWeight: '500', color: '#eafff0' },
@@ -217,6 +262,7 @@ const styles = StyleSheet.create({
   captureBtn: { width: 78, height: 78, borderRadius: 39, borderWidth: 4, borderColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center' },
   captureBtnInner: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#fff' },
   controlsLabel: { position: 'absolute', bottom: 36, left: 0, right: 0, textAlign: 'center', fontSize: 13, fontWeight: '500', color: 'rgba(234,255,240,0.5)' },
+  uploadInstead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   spinner: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: 'rgba(201,251,78,0.25)', borderTopColor: Colors.lime },
   dimOverlay: { position: 'absolute', inset: 0, backgroundColor: 'rgba(6,12,9,0.5)' },
   resultSheet: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, paddingTop: 10, paddingBottom: 32 },
@@ -234,6 +280,8 @@ const styles = StyleSheet.create({
   altToggleText: { fontSize: 14, fontWeight: '500', color: Colors.labelSecondary },
   altCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: 13, borderWidth: 1, borderColor: Colors.separator, backgroundColor: '#fff' },
   altIcon: { width: 36, height: 36, borderRadius: 9, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
+  manualRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, marginTop: 2 },
+  manualText: { fontSize: 14, fontWeight: '600', color: Colors.greenDeep },
   viewGuideBtn: { height: 54, backgroundColor: Colors.green, borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   viewGuideBtnText: { fontSize: 17, fontWeight: '600', color: '#fff', letterSpacing: -0.3 },
   retakeBtn: { height: 48, borderRadius: 14, backgroundColor: '#f2f2f7', alignItems: 'center', justifyContent: 'center', marginTop: 10 },

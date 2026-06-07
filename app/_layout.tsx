@@ -2,6 +2,8 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { PlacesProvider } from '../context/PlacesContext';
+import { WorkoutsProvider } from '../context/WorkoutsContext';
 
 function RootNavigator() {
   const { user, userProfile, loading } = useAuth();
@@ -44,6 +46,17 @@ function RootNavigator() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="guide/[key]" />
       <Stack.Screen name="add-machine" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="library/index" />
+      <Stack.Screen name="library/[category]" />
+      <Stack.Screen name="place/[id]" />
+      <Stack.Screen name="machine/[id]" />
+      <Stack.Screen name="workout/builder" />
+      <Stack.Screen name="workout/preview" />
+      <Stack.Screen name="workout/session" />
+      <Stack.Screen name="workout/complete" />
+      <Stack.Screen name="progress" />
+      <Stack.Screen name="settings" />
+      <Stack.Screen name="legal/[doc]" />
     </Stack>
   );
 }
@@ -51,8 +64,12 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <StatusBar style="light" />
-      <RootNavigator />
+      <PlacesProvider>
+        <WorkoutsProvider>
+          <StatusBar style="light" />
+          <RootNavigator />
+        </WorkoutsProvider>
+      </PlacesProvider>
     </AuthProvider>
   );
 }

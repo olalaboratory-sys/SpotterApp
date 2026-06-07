@@ -1,26 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
-  View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, Dimensions, ActivityIndicator,
+  View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { Colors } from '../../constants/colors';
+import { iconForKey } from '../../constants/machineIcon';
 import { useAuth } from '../../context/AuthContext';
-import { db } from '../../lib/firebase';
+import { usePlaces } from '../../context/PlacesContext';
+import { useWorkouts } from '../../context/WorkoutsContext';
 
 const { width } = Dimensions.get('window');
-
-type SavedMachine = {
-  id: string;
-  name: string;
-  muscle: string;
-  status: string;
-  dotColor: string;
-  machineKey: string;
-};
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -38,44 +29,17 @@ function SectionHead({ title, action, onAction }: { title: string; action?: stri
   );
 }
 
-function EmptyMachines({ onAdd }: { onAdd: () => void }) {
-  return (
-    <View style={styles.emptyWrap}>
-      <Ionicons name="barbell-outline" size={40} color={Colors.labelTertiary} />
-      <Text style={styles.emptyTitle}>No machines saved yet</Text>
-      <Text style={styles.emptySub}>Scan a machine or add one manually to get started.</Text>
-      <TouchableOpacity style={styles.emptyBtn} onPress={onAdd}>
-        <Text style={styles.emptyBtnText}>Add your first machine</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 export default function HomeScreen() {
   const router = useRouter();
-  const { user, userProfile } = useAuth();
-  const [machines, setMachines] = useState<SavedMachine[]>([]);
-  const [machinesLoading, setMachinesLoading] = useState(true);
+  const { userProfile } = useAuth();
+  const { current, currentMachines, recent, saved } = usePlaces();
+  const { history } = useWorkouts();
 
   const firstName = userProfile?.displayName?.split(' ')[0] ?? 'there';
 
-  useEffect(() => {
-    if (!user) return;
-    const q = query(
-      collection(db, 'users', user.uid, 'machines'),
-      orderBy('savedAt', 'desc'),
-      limit(10),
-    );
-    const unsub = onSnapshot(q, snap => {
-      setMachines(snap.docs.map(d => ({ id: d.id, ...d.data() } as SavedMachine)));
-      setMachinesLoading(false);
-    }, () => setMachinesLoading(false));
-    return unsub;
-  }, [user]);
-
   const QUICK = [
-    { icon: 'list-outline' as const, title: 'Beginner workout', sub: 'Build in 1 tap' },
-    { icon: 'business-outline' as const, title: 'My Gym', sub: `${userProfile?.machinesCount ?? 0} machines` },
+    { icon: 'list-outline' as const, title: 'Beginner workout', sub: 'Build in 1 tap', onPress: () => router.push('/workout/builder') },
+    { icon: 'business-outline' as const, title: current?.name ?? 'My place', sub: `${currentMachines.length} machines`, onPress: () => router.push('/(tabs)/my-gym') },
   ];
 
   return (
@@ -88,26 +52,17 @@ export default function HomeScreen() {
           </View>
           <View style={styles.streak}>
             <Ionicons name="flame" size={16} color={Colors.amber} />
-            <Text style={styles.streakNum}>{userProfile?.machinesCount ?? 0}</Text>
+            <Text style={styles.streakNum}>{saved.length}</Text>
           </View>
         </View>
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
           <View style={styles.heroWrap}>
             <TouchableOpacity style={styles.hero} onPress={() => router.push('/(tabs)/scan')} activeOpacity={0.9}>
-              <LinearGradient
-                colors={[Colors.ink2, Colors.ink]}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-              />
-              <View style={styles.heroCornerGraphic}>
-                <Ionicons name="scan-outline" size={28} color={Colors.lime} />
-              </View>
+              <LinearGradient colors={[Colors.ink2, Colors.ink]} style={StyleSheet.absoluteFill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
+              <View style={styles.heroCornerGraphic}><Ionicons name="scan-outline" size={28} color={Colors.lime} /></View>
               <View style={styles.heroContent}>
-                <View style={styles.heroIconBox}>
-                  <Ionicons name="scan-outline" size={28} color={Colors.ink} />
-                </View>
+                <View style={styles.heroIconBox}><Ionicons name="scan-outline" size={28} color={Colors.ink} /></View>
                 <Text style={styles.heroEyebrow}>Start here</Text>
                 <Text style={styles.heroTitle}>Scan a machine</Text>
                 <Text style={styles.heroBody}>Point your camera at any machine to get a beginner guide in seconds.</Text>
@@ -125,11 +80,9 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <View style={styles.quickGrid}>
               {QUICK.map(q => (
-                <TouchableOpacity key={q.title} style={styles.quickCard} activeOpacity={0.8}>
-                  <View style={styles.quickIcon}>
-                    <Ionicons name={q.icon} size={20} color={Colors.greenDeep} />
-                  </View>
-                  <Text style={styles.quickTitle}>{q.title}</Text>
+                <TouchableOpacity key={q.title} style={styles.quickCard} activeOpacity={0.8} onPress={q.onPress}>
+                  <View style={styles.quickIcon}><Ionicons name={q.icon} size={20} color={Colors.greenDeep} /></View>
+                  <Text style={styles.quickTitle} numberOfLines={1}>{q.title}</Text>
                   <Text style={styles.quickSub}>{q.sub}</Text>
                 </TouchableOpacity>
               ))}
@@ -138,29 +91,31 @@ export default function HomeScreen() {
 
           <View style={[styles.section, { paddingHorizontal: 0 }]}>
             <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
-              <SectionHead title="Recently scanned" />
+              <SectionHead title="Recently scanned" action={recent.length ? 'See all' : undefined} onAction={() => router.push('/library')} />
             </View>
-            {machinesLoading ? (
-              <ActivityIndicator color={Colors.green} style={{ marginVertical: 20 }} />
-            ) : machines.length === 0 ? (
-              <EmptyMachines onAdd={() => router.push('/add-machine')} />
+            {recent.length === 0 ? (
+              <View style={styles.emptyWrap}>
+                <Ionicons name="barbell-outline" size={40} color={Colors.labelTertiary} />
+                <Text style={styles.emptyTitle}>No machines saved yet</Text>
+                <Text style={styles.emptySub}>Scan a machine or add one manually to get started.</Text>
+                <TouchableOpacity style={styles.emptyBtn} onPress={() => router.push('/add-machine')}>
+                  <Text style={styles.emptyBtnText}>Add your first machine</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 12, paddingBottom: 4 }}>
-                {machines.map(m => (
-                  <TouchableOpacity
-                    key={m.id}
-                    style={styles.recentCard}
-                    onPress={() => router.push({ pathname: '/guide/[key]', params: { key: m.machineKey } })}
-                    activeOpacity={0.85}
-                  >
+                {recent.map(m => (
+                  <TouchableOpacity key={m.id} style={styles.recentCard} onPress={() => router.push({ pathname: '/guide/[key]', params: { key: m.key } })} activeOpacity={0.85}>
                     <View style={styles.recentImagePlaceholder}>
-                      <Ionicons name="barbell-outline" size={36} color={Colors.green} />
+                      {m.photoUri
+                        ? <Image source={{ uri: m.photoUri }} style={styles.recentPhoto} resizeMode="cover" />
+                        : <Ionicons name={iconForKey(m.key)} size={36} color={Colors.green} />}
                     </View>
                     <View style={styles.recentInfo}>
-                      <Text style={styles.recentName}>{m.name}</Text>
-                      <Text style={styles.recentMuscle}>{m.muscle}</Text>
+                      <Text style={styles.recentName} numberOfLines={1}>{m.name}</Text>
+                      <Text style={styles.recentMuscle} numberOfLines={1}>{m.cat}</Text>
                       <View style={styles.recentStatus}>
-                        <View style={[styles.recentDot, { backgroundColor: m.dotColor }]} />
+                        <View style={[styles.recentDot, { backgroundColor: m.status === 'Comfortable' ? Colors.green : m.status === 'Scanned' ? Colors.sky : Colors.amber }]} />
                         <Text style={styles.recentStatusText}>{m.status}</Text>
                       </View>
                     </View>
@@ -171,11 +126,22 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.section}>
-            <SectionHead title="Your progress" />
+            <TouchableOpacity style={styles.browseRow} activeOpacity={0.85} onPress={() => router.push('/library')}>
+              <View style={styles.browseIcon}><Ionicons name="library-outline" size={20} color={Colors.greenDeep} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.browseTitle}>Browse the machine library</Text>
+                <Text style={styles.browseSub}>65 machines · by body area</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.labelTertiary} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <SectionHead title="Your progress" action="Details" onAction={() => router.push('/progress')} />
             <View style={styles.progressGrid}>
               {[
-                { n: String(userProfile?.machinesCount ?? 0), label: 'machines\nlearned', icon: 'locate-outline' as const },
-                { n: String(userProfile?.workoutsCount ?? 0), label: 'workouts\ndone', icon: 'barbell-outline' as const },
+                { n: String(saved.length), label: 'machines\nlearned', icon: 'locate-outline' as const },
+                { n: String(history.length), label: 'workouts\ndone', icon: 'barbell-outline' as const },
                 { n: userProfile?.subscriptionStatus === 'trial' ? 'Trial' : 'Free', label: 'gym\nconfidence', icon: 'shield-outline' as const },
               ].map(p => (
                 <View key={p.label} style={styles.progressCard}>
@@ -225,13 +191,18 @@ const styles = StyleSheet.create({
   emptyBtn: { marginTop: 12, height: 42, paddingHorizontal: 20, borderRadius: 12, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: Colors.green },
   emptyBtnText: { fontSize: 14, fontWeight: '600', color: Colors.greenDeep },
   recentCard: { width: 150, backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
-  recentImagePlaceholder: { height: 88, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
+  recentImagePlaceholder: { height: 88, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  recentPhoto: { width: '100%', height: '100%' },
   recentInfo: { padding: 10, gap: 3 },
   recentName: { fontSize: 14, fontWeight: '600', color: Colors.labelPrimary, letterSpacing: -0.2 },
   recentMuscle: { fontSize: 12, color: Colors.labelSecondary },
   recentStatus: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
   recentDot: { width: 6, height: 6, borderRadius: 3 },
   recentStatusText: { fontSize: 11, color: Colors.labelSecondary, fontWeight: '500' },
+  browseRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 16, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
+  browseIcon: { width: 40, height: 40, borderRadius: 11, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
+  browseTitle: { fontSize: 15, fontWeight: '600', color: Colors.labelPrimary, letterSpacing: -0.2 },
+  browseSub: { fontSize: 12, color: Colors.labelSecondary, marginTop: 2 },
   progressGrid: { flexDirection: 'row', gap: 12 },
   progressCard: { flex: 1, backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 15, gap: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
   progressNum: { fontSize: 22, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.5 },

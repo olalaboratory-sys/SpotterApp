@@ -4,9 +4,12 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { doc, updateDoc } from 'firebase/firestore';
 import { Colors } from '../../constants/colors';
 import { StepDots } from '../../components/ui/StepDots';
 import { SpotButton } from '../../components/ui/SpotButton';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../lib/firebase';
 
 const OPTIONS = [
   { id: 'new', label: "I'm completely new", sub: "I've barely touched the machines", icon: 'sparkles-outline' as const },
@@ -17,7 +20,15 @@ const OPTIONS = [
 
 export default function ExperienceScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
+
+  const onContinue = () => {
+    if (user && selected) {
+      updateDoc(doc(db, 'users', user.uid), { experienceLevel: selected }).catch(() => {});
+    }
+    router.push('/(onboarding)/goals');
+  };
 
   return (
     <View style={styles.screen}>
@@ -63,7 +74,7 @@ export default function ExperienceScreen() {
         <View style={styles.footer}>
           <SpotButton
             label="Continue"
-            onPress={() => router.push('/(onboarding)/goals')}
+            onPress={onContinue}
             disabled={!selected}
           />
         </View>

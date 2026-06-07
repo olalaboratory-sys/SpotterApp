@@ -4,18 +4,22 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { useAuth, getDaysLeftInTrial } from '../../context/AuthContext';
+import { usePlaces } from '../../context/PlacesContext';
+import { useWorkouts } from '../../context/WorkoutsContext';
 
-const SETTINGS = [
-  { icon: 'person-outline' as const, label: 'Edit fitness profile', sub: 'Goal · Experience · Preferences' },
-  { icon: 'notifications-outline' as const, label: 'Notifications', sub: 'Reminders · Rest timer alerts' },
-  { icon: 'camera-outline' as const, label: 'Camera & permissions', sub: '' },
-  { icon: 'shield-outline' as const, label: 'Privacy', sub: '' },
-  { icon: 'help-circle-outline' as const, label: 'Help center', sub: 'How scanning works · FAQ' },
+const SETTINGS: { icon: keyof typeof Ionicons.glyphMap; label: string; sub: string; route: string }[] = [
+  { icon: 'stats-chart-outline', label: 'Progress & badges', sub: 'Streak · learned machines', route: '/progress' },
+  { icon: 'person-outline', label: 'Edit fitness profile', sub: 'Goal · Experience · Preferences', route: '/settings' },
+  { icon: 'notifications-outline', label: 'Notifications', sub: 'Reminders · Rest timer alerts', route: '/settings' },
+  { icon: 'shield-outline', label: 'Privacy & legal', sub: 'Disclaimer · Privacy · Terms', route: '/settings' },
+  { icon: 'help-circle-outline', label: 'Help center', sub: 'How scanning works · FAQ', route: '/settings' },
 ];
 
 export default function ProfileTab() {
   const router = useRouter();
   const { userProfile, signOut } = useAuth();
+  const { saved } = usePlaces();
+  const { history } = useWorkouts();
 
   const daysLeft = getDaysLeftInTrial(userProfile?.trialStartedAt ?? null);
   const isTrialActive = userProfile?.subscriptionStatus === 'trial' && daysLeft > 0;
@@ -82,8 +86,8 @@ export default function ProfileTab() {
             <Text style={styles.sectionTitle}>Activity</Text>
             <View style={styles.progressRow}>
               {[
-                { n: String(userProfile?.machinesCount ?? 0), l: 'machines learned' },
-                { n: String(userProfile?.workoutsCount ?? 0), l: 'workouts done' },
+                { n: String(saved.length), l: 'machines learned' },
+                { n: String(history.length), l: 'workouts done' },
                 { n: isTrialActive ? `${daysLeft}d` : '—', l: 'trial left' },
               ].map(p => (
                 <View key={p.l} style={styles.statCard}>
@@ -98,7 +102,7 @@ export default function ProfileTab() {
             <Text style={styles.sectionTitle}>Settings</Text>
             <View style={styles.settingsList}>
               {SETTINGS.map((s, i) => (
-                <TouchableOpacity key={s.label} style={[styles.settingsRow, i > 0 && styles.settingsRowBorder]} activeOpacity={0.7}>
+                <TouchableOpacity key={s.label} style={[styles.settingsRow, i > 0 && styles.settingsRowBorder]} activeOpacity={0.7} onPress={() => router.push(s.route as any)}>
                   <View style={styles.settingsIcon}>
                     <Ionicons name={s.icon} size={20} color={Colors.green} />
                   </View>

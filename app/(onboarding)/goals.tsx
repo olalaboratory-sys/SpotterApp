@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { doc, updateDoc } from 'firebase/firestore';
 import { Colors } from '../../constants/colors';
 import { StepDots } from '../../components/ui/StepDots';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../lib/firebase';
 
 const GOALS = [
   { id: 'confident', label: 'Feel confident at the gym', icon: 'shield-checkmark-outline' as const },
@@ -16,10 +19,17 @@ const GOALS = [
 
 export default function GoalsScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [selected, setSelected] = useState<string[]>([]);
 
   const toggle = (id: string) =>
     setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
+
+  const onContinue = () => {
+    if (!selected.length) return;
+    if (user) updateDoc(doc(db, 'users', user.uid), { goals: selected }).catch(() => {});
+    router.push('/(onboarding)/camera-permission');
+  };
 
   return (
     <View style={styles.screen}>
@@ -59,7 +69,7 @@ export default function GoalsScreen() {
         <View style={styles.footer}>
           <TouchableOpacity
             style={[styles.btn, !selected.length && styles.btnDisabled]}
-            onPress={() => selected.length && router.push('/(onboarding)/camera-permission')}
+            onPress={onContinue}
             activeOpacity={0.85}
           >
             <Text style={styles.btnText}>Continue {selected.length > 0 ? `(${selected.length})` : ''}</Text>

@@ -1,13 +1,14 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
-  ScrollView, NativeScrollEvent, NativeSyntheticEvent, ActivityIndicator,
+  ScrollView, NativeScrollEvent, NativeSyntheticEvent, ActivityIndicator, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
+import { purchasePlan, restorePurchases, PlanId } from '../lib/purchases';
 
 const PLANS = [
   { id: 'monthly', name: 'Monthly', price: '$2.99', per: '/mo', sub: 'Billed monthly', trial: true },
@@ -40,13 +41,27 @@ export default function PaywallScreen() {
     if (!seen) return;
     setSaving(true);
     try {
-      await startTrial(plan);
+      const res = await purchasePlan(plan as PlanId);
+      if (res.success) await startTrial(plan);
       router.replace('/(tabs)');
     } catch {
       router.replace('/(tabs)');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleRestore = async () => {
+    const res = await restorePurchases();
+    Alert.alert(
+      res.restored ? 'Purchases restored' : 'Nothing to restore',
+      res.restored ? 'Your Premium access is active again.' : "We couldn't find a previous purchase for this Apple ID.",
+    );
+  };
+
+  const onLegal = (label: string) => {
+    if (label === 'Restore') return handleRestore();
+    router.push({ pathname: '/legal/[doc]', params: { doc: label === 'Terms' ? 'terms' : 'privacy' } });
   };
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -189,7 +204,7 @@ export default function PaywallScreen() {
           </Text>
           <View style={styles.legalRow}>
             {['Restore', 'Terms', 'Privacy'].map(l => (
-              <TouchableOpacity key={l} style={styles.legalBtn}>
+              <TouchableOpacity key={l} style={styles.legalBtn} onPress={() => onLegal(l)}>
                 <Text style={styles.legalText}>{l}</Text>
               </TouchableOpacity>
             ))}
