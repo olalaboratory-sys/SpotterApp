@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,17 +9,21 @@ import PlacePickerSheet from '../../components/PlacePickerSheet';
 import SwipeableRow from '../../components/SwipeableRow';
 import Skeleton from '../../components/Skeleton';
 
+/** Short relative label for the last-trained timestamp (e.g. "today", "3d ago"). */
 function trainedAgo(d: Date | null | undefined): string | null {
   if (!d) return null;
   const days = Math.floor((Date.now() - d.getTime()) / 86400000);
-  if (days <= 0) return 'Trained today';
-  if (days === 1) return 'Trained yesterday';
-  if (days < 7) return `Trained ${days}d ago`;
-  if (days < 30) return `Trained ${Math.floor(days / 7)}w ago`;
-  return 'Trained a while ago';
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return 'a while ago';
 }
 
 const FILTERS = ['All', 'Upper', 'Lower', 'Core'] as const;
+const PLACE_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
+  gym: 'barbell-outline', home: 'home-outline', hotel: 'bed-outline', other: 'ellipsis-horizontal',
+};
 
 export default function MyPlacesTab() {
   const router = useRouter();
@@ -34,6 +38,26 @@ export default function MyPlacesTab() {
     ]);
   };
 
+  // Per-area counts drive the filter chips (only show areas that have machines).
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { All: currentMachines.length, Upper: 0, Lower: 0, Core: 0 };
+    currentMachines.forEach(m => { if (m.area in c) c[m.area] += 1; });
+    return c;
+  }, [currentMachines]);
+
+  const visibleFilters = useMemo(
+    () => FILTERS.filter(f => f === 'All' || counts[f] > 0),
+    [counts],
+  );
+
+  // If the active filter's area empties out, fall back to All.
+  useEffect(() => {
+    if (!visibleFilters.includes(filter)) setFilter('All');
+  }, [visibleFilters, filter]);
+
+  const confidentCount = currentMachines.filter(m => m.status === 'Comfortable').length;
+  const placeIcon = PLACE_ICON[current?.type ?? 'gym'] ?? 'barbell-outline';
+
   const machines = useMemo(
     () => (filter === 'All' ? currentMachines : currentMachines.filter(m => m.area === filter)),
     [currentMachines, filter],
@@ -43,19 +67,28 @@ export default function MyPlacesTab() {
     <View style={styles.screen}>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>My places</Text>
-            <TouchableOpacity style={styles.switcher} onPress={() => setPickerOpen(true)} activeOpacity={0.7}>
-              <Text style={styles.switcherName}>{current?.name ?? 'My Gym'}</Text>
-              <Ionicons name="chevron-down" size={16} color={Colors.greenDeep} />
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity style={styles.headerAdd} onPress={() => setPickerOpen(true)} accessibilityRole="button" accessibilityLabel="Switch or manage places">
-            <Ionicons name="swap-horizontal" size={20} color={Colors.green} />
-          </TouchableOpacity>
+          <Text style={styles.title}>My places</Text>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+          {/* Current place selector */}
+          <View style={styles.section}>
+            <TouchableOpacity style={styles.placeCard} activeOpacity={0.85} onPress={() => setPickerOpen(true)} accessibilityRole="button" accessibilityLabel="Switch or manage places">
+              <View style={styles.placeIcon}><Ionicons name={placeIcon} size={22} color={Colors.greenDeep} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.placeName} numberOfLines={1}>{current?.name ?? 'My Gym'}</Text>
+                <Text style={styles.placeMeta}>
+                  {currentMachines.length} machine{currentMachines.length === 1 ? '' : 's'}
+                  {confidentCount > 0 ? ` · ${confidentCount} confident` : ''}
+                </Text>
+              </View>
+              <View style={styles.switchPill}>
+                <Ionicons name="swap-horizontal" size={15} color={Colors.greenDeep} />
+                <Text style={styles.switchPillText}>Switch</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.section}>
             <TouchableOpacity style={styles.addBtn} activeOpacity={0.9} onPress={() => router.push('/add-machine')}>
               <Ionicons name="add" size={22} color="#fff" />
@@ -66,13 +99,19 @@ export default function MyPlacesTab() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.filterRow}>
-            {FILTERS.map(f => (
-              <TouchableOpacity key={f} style={[styles.filterChip, filter === f && styles.filterChipActive]} onPress={() => setFilter(f)}>
-                <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>{f}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {currentMachines.length > 0 && (
+            <View style={styles.filterRow}>
+              {visibleFilters.map(f => {
+                const on = filter === f;
+                return (
+                  <TouchableOpacity key={f} style={[styles.filterChip, on && styles.filterChipActive]} onPress={() => setFilter(f)}>
+                    <Text style={[styles.filterText, on && styles.filterTextActive]}>{f}</Text>
+                    <Text style={[styles.filterCount, on && styles.filterCountActive]}>{counts[f]}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
 
           {loading && machines.length === 0 ? (
             <View style={styles.grid}>
@@ -108,7 +147,14 @@ export default function MyPlacesTab() {
                           : <Ionicons name={iconForKey(m.key)} size={34} color={Colors.green} />}
                       </View>
                       <Text style={styles.cardName} numberOfLines={1}>{m.name}</Text>
-                      <Text style={styles.cardCat} numberOfLines={1}>{trained ?? m.cat}</Text>
+                      {trained ? (
+                        <View style={styles.cardMetaRow}>
+                          <Ionicons name="time-outline" size={11} color={Colors.labelSecondary} />
+                          <Text style={[styles.cardCat, { marginTop: 0, flex: 1 }]} numberOfLines={1}>Trained {trained}</Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.cardCat} numberOfLines={1}>{m.cat}</Text>
+                      )}
                       <View style={styles.cardStatus}>
                         <View style={[styles.dot, { backgroundColor: m.status === 'Comfortable' ? Colors.green : m.status === 'Scanned' ? Colors.sky : Colors.amber }]} />
                         <Text style={styles.cardStatusText}>{m.status}</Text>
@@ -138,27 +184,33 @@ export default function MyPlacesTab() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.cloud },
-  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
+  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
   title: { fontSize: 34, fontWeight: '700', letterSpacing: 0.4, color: Colors.labelPrimary },
-  switcher: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  switcherName: { fontSize: 15, fontWeight: '600', color: Colors.greenDeep },
-  headerAdd: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
   section: { paddingHorizontal: 20, marginBottom: 16 },
+  placeCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 16, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+  placeIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
+  placeName: { fontSize: 17, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.3 },
+  placeMeta: { fontSize: 13, color: Colors.labelSecondary, marginTop: 2 },
+  switchPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, height: 32, borderRadius: 100, backgroundColor: Colors.mist },
+  switchPillText: { fontSize: 13, fontWeight: '600', color: Colors.greenDeep },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Colors.green, borderRadius: 18, padding: 18, shadowColor: '#082816', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.18, shadowRadius: 18 },
   addBtnText: { fontSize: 17, fontWeight: '700', color: '#fff' },
   addBtnSub: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 1 },
   filterRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginBottom: 16 },
-  filterChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 100, backgroundColor: '#fff', borderWidth: 1, borderColor: Colors.separator },
+  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 100, backgroundColor: '#fff', borderWidth: 1, borderColor: Colors.separator },
   filterChipActive: { backgroundColor: Colors.ink, borderColor: Colors.ink },
   filterText: { fontSize: 14, fontWeight: '600', color: Colors.labelSecondary },
   filterTextActive: { color: '#fff' },
+  filterCount: { fontSize: 12, fontWeight: '700', color: Colors.labelTertiary, minWidth: 14, textAlign: 'center' },
+  filterCountActive: { color: 'rgba(255,255,255,0.7)' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: 20 },
-  cardWrap: { width: '47%', flexGrow: 1 },
+  cardWrap: { width: '47%', flexGrow: 1, maxWidth: '48.5%' },
   card: { backgroundColor: '#fff', borderRadius: 18, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
   cardImage: { height: 80, borderRadius: 12, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center', marginBottom: 10, overflow: 'hidden' },
   cardPhoto: { width: '100%', height: '100%' },
   skeletonLine: { height: 11, borderRadius: 6, marginTop: 7 },
   cardName: { fontSize: 15, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.2 },
+  cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
   cardCat: { fontSize: 12, color: Colors.labelSecondary, marginTop: 2 },
   cardStatus: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
   dot: { width: 7, height: 7, borderRadius: 4 },
