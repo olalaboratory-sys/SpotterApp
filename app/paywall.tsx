@@ -1,12 +1,13 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
-  ScrollView, NativeScrollEvent, NativeSyntheticEvent,
+  ScrollView, NativeScrollEvent, NativeSyntheticEvent, ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useAuth } from '../context/AuthContext';
 
 const PLANS = [
   { id: 'monthly', name: 'Monthly', price: '$2.99', per: '/mo', sub: 'Billed monthly', trial: true },
@@ -30,8 +31,23 @@ const TRIAL = [
 
 export default function PaywallScreen() {
   const router = useRouter();
+  const { startTrial } = useAuth();
   const [plan, setPlan] = useState('monthly');
   const [seen, setSeen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const handleStartTrial = async () => {
+    if (!seen) return;
+    setSaving(true);
+    try {
+      await startTrial(plan);
+      router.replace('/(tabs)');
+    } catch {
+      router.replace('/(tabs)');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
@@ -48,7 +64,7 @@ export default function PaywallScreen() {
       <SafeAreaView style={{ flex: 1 }}>
         {/* Close */}
         <View style={styles.closeRow}>
-          <TouchableOpacity style={styles.closeBtn} onPress={() => router.replace('/(tabs)')} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.closeBtn} onPress={handleStartTrial} activeOpacity={0.8}>
             <Ionicons name="close" size={18} color="rgba(255,255,255,0.8)" />
           </TouchableOpacity>
         </View>
@@ -153,10 +169,13 @@ export default function PaywallScreen() {
         <View style={styles.cta}>
           <TouchableOpacity
             style={[styles.ctaBtn, !seen && styles.ctaBtnDimmed]}
-            onPress={() => seen && router.replace('/(tabs)')}
+            onPress={handleStartTrial}
             activeOpacity={0.85}
           >
-            <Ionicons name={seen ? 'flash' : 'chevron-down'} size={19} color={Colors.ink} style={{ marginRight: 8 }} />
+            {saving
+              ? <ActivityIndicator color={Colors.ink} style={{ marginRight: 8 }} />
+              : <Ionicons name={seen ? 'flash' : 'chevron-down'} size={19} color={Colors.ink} style={{ marginRight: 8 }} />
+            }
             <Text style={styles.ctaBtnText}>
               {!seen ? 'Scroll to see plans' : currentPlan.trial ? 'Start my 7-day free trial' : 'Unlock lifetime access'}
             </Text>

@@ -1,26 +1,33 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, Dimensions,
+  TouchableOpacity, Dimensions, ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { Colors } from '../../constants/colors';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../lib/firebase';
 
 const { width } = Dimensions.get('window');
 
-const RECENT = [
-  { key: 'lat', name: 'Lat Pulldown', muscle: 'Back · Lats', status: 'scanned', dotColor: Colors.sky },
-  { key: 'chest', name: 'Chest Press', muscle: 'Chest', status: 'Comfortable', dotColor: Colors.green },
-  { key: 'leg', name: 'Leg Press', muscle: 'Legs · Glutes', status: 'Tried once', dotColor: Colors.amber },
-  { key: 'row', name: 'Seated Row', muscle: 'Back', status: 'Comfortable', dotColor: Colors.green },
-];
+type SavedMachine = {
+  id: string;
+  name: string;
+  muscle: string;
+  status: string;
+  dotColor: string;
+  machineKey: string;
+};
 
-const QUICK = [
-  { icon: 'list-outline' as const, title: 'Beginner workout', sub: 'Build in 1 tap' },
-  { icon: 'business-outline' as const, title: 'My Gym', sub: '12 machines' },
-];
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
 
 function SectionHead({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
   return (
@@ -31,26 +38,61 @@ function SectionHead({ title, action, onAction }: { title: string; action?: stri
   );
 }
 
+function EmptyMachines({ onAdd }: { onAdd: () => void }) {
+  return (
+    <View style={styles.emptyWrap}>
+      <Ionicons name="barbell-outline" size={40} color={Colors.labelTertiary} />
+      <Text style={styles.emptyTitle}>No machines saved yet</Text>
+      <Text style={styles.emptySub}>Scan a machine or add one manually to get started.</Text>
+      <TouchableOpacity style={styles.emptyBtn} onPress={onAdd}>
+        <Text style={styles.emptyBtnText}>Add your first machine</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const router = useRouter();
+  const { user, userProfile } = useAuth();
+  const [machines, setMachines] = useState<SavedMachine[]>([]);
+  const [machinesLoading, setMachinesLoading] = useState(true);
+
+  const firstName = userProfile?.displayName?.split(' ')[0] ?? 'there';
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, 'users', user.uid, 'machines'),
+      orderBy('savedAt', 'desc'),
+      limit(10),
+    );
+    const unsub = onSnapshot(q, snap => {
+      setMachines(snap.docs.map(d => ({ id: d.id, ...d.data() } as SavedMachine)));
+      setMachinesLoading(false);
+    }, () => setMachinesLoading(false));
+    return unsub;
+  }, [user]);
+
+  const QUICK = [
+    { icon: 'list-outline' as const, title: 'Beginner workout', sub: 'Build in 1 tap' },
+    { icon: 'business-outline' as const, title: 'My Gym', sub: `${userProfile?.machinesCount ?? 0} machines` },
+  ];
 
   return (
     <View style={styles.screen}>
       <SafeAreaView style={{ flex: 1 }}>
-        {/* Header */}
         <View style={styles.topBar}>
           <View>
-            <Text style={styles.greeting}>Good evening, Jordan</Text>
+            <Text style={styles.greeting}>{getGreeting()}, {firstName}</Text>
             <Text style={styles.tagline}>Ready to learn a machine?</Text>
           </View>
           <View style={styles.streak}>
             <Ionicons name="flame" size={16} color={Colors.amber} />
-            <Text style={styles.streakNum}>4</Text>
+            <Text style={styles.streakNum}>{userProfile?.machinesCount ?? 0}</Text>
           </View>
         </View>
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-          {/* Hero: Scan card */}
           <View style={styles.heroWrap}>
             <TouchableOpacity style={styles.hero} onPress={() => router.push('/(tabs)/scan')} activeOpacity={0.9}>
               <LinearGradient
@@ -59,7 +101,6 @@ export default function HomeScreen() {
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
               />
-              {/* Scan corner graphic */}
               <View style={styles.heroCornerGraphic}>
                 <Ionicons name="scan-outline" size={28} color={Colors.lime} />
               </View>
@@ -74,15 +115,13 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Add manually */}
           <View style={styles.section}>
-            <TouchableOpacity style={styles.addManual} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.addManual} activeOpacity={0.8} onPress={() => router.push('/add-machine')}>
               <Ionicons name="add-circle-outline" size={18} color={Colors.greenDeep} />
               <Text style={styles.addManualText}>Add a machine manually</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Quick actions */}
           <View style={styles.section}>
             <View style={styles.quickGrid}>
               {QUICK.map(q => (
@@ -97,80 +136,47 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Recently scanned */}
           <View style={[styles.section, { paddingHorizontal: 0 }]}>
             <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
-              <SectionHead title="Recently scanned" action="See all" />
+              <SectionHead title="Recently scanned" />
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 12, paddingBottom: 4 }}>
-              {RECENT.map(m => (
-                <TouchableOpacity
-                  key={m.key}
-                  style={styles.recentCard}
-                  onPress={() => router.push({ pathname: '/guide/[key]', params: { key: m.key } })}
-                  activeOpacity={0.85}
-                >
-                  <View style={styles.recentImagePlaceholder}>
-                    <Ionicons name="barbell-outline" size={36} color={Colors.green} />
-                  </View>
-                  <View style={styles.recentInfo}>
-                    <Text style={styles.recentName}>{m.name}</Text>
-                    <Text style={styles.recentMuscle}>{m.muscle}</Text>
-                    <View style={styles.recentStatus}>
-                      <View style={[styles.recentDot, { backgroundColor: m.dotColor }]} />
-                      <Text style={styles.recentStatusText}>{m.status}</Text>
+            {machinesLoading ? (
+              <ActivityIndicator color={Colors.green} style={{ marginVertical: 20 }} />
+            ) : machines.length === 0 ? (
+              <EmptyMachines onAdd={() => router.push('/add-machine')} />
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 12, paddingBottom: 4 }}>
+                {machines.map(m => (
+                  <TouchableOpacity
+                    key={m.id}
+                    style={styles.recentCard}
+                    onPress={() => router.push({ pathname: '/guide/[key]', params: { key: m.machineKey } })}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.recentImagePlaceholder}>
+                      <Ionicons name="barbell-outline" size={36} color={Colors.green} />
                     </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                    <View style={styles.recentInfo}>
+                      <Text style={styles.recentName}>{m.name}</Text>
+                      <Text style={styles.recentMuscle}>{m.muscle}</Text>
+                      <View style={styles.recentStatus}>
+                        <View style={[styles.recentDot, { backgroundColor: m.dotColor }]} />
+                        <Text style={styles.recentStatusText}>{m.status}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
           </View>
 
-          {/* Learn next */}
           <View style={styles.section}>
-            <SectionHead title="Learn next" />
-            <TouchableOpacity
-              style={styles.learnCard}
-              onPress={() => router.push({ pathname: '/guide/[key]', params: { key: 'row' } })}
-              activeOpacity={0.85}
-            >
-              <View style={styles.learnImage}>
-                <Ionicons name="barbell-outline" size={40} color={Colors.green} />
-              </View>
-              <View style={styles.learnText}>
-                <View style={styles.learnBadge}>
-                  <Ionicons name="sparkles" size={12} color={Colors.ink} />
-                  <Text style={styles.learnBadgeText}>Recommended</Text>
-                </View>
-                <Text style={styles.learnTitle}>Seated Row</Text>
-                <Text style={styles.learnDesc}>Great beginner machine for back & posture — pairs with what you've learned.</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={Colors.labelTertiary} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Library link */}
-          <View style={styles.section}>
-            <TouchableOpacity style={styles.libraryCard} activeOpacity={0.85}>
-              <View style={styles.libraryIcon}>
-                <Ionicons name="list-outline" size={20} color={Colors.greenDeep} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.libraryTitle}>Browse the machine library</Text>
-                <Text style={styles.librarySub}>50+ guides by body area</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={Colors.labelTertiary} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Progress strip */}
-          <View style={styles.section}>
-            <SectionHead title="Your progress" action="Details" />
+            <SectionHead title="Your progress" />
             <View style={styles.progressGrid}>
               {[
-                { n: '6', label: 'machines\nlearned', icon: 'locate-outline' as const },
-                { n: '3', label: 'workouts\ndone', icon: 'barbell-outline' as const },
-                { n: 'Lvl 2', label: 'gym\nconfidence', icon: 'shield-outline' as const },
+                { n: String(userProfile?.machinesCount ?? 0), label: 'machines\nlearned', icon: 'locate-outline' as const },
+                { n: String(userProfile?.workoutsCount ?? 0), label: 'workouts\ndone', icon: 'barbell-outline' as const },
+                { n: userProfile?.subscriptionStatus === 'trial' ? 'Trial' : 'Free', label: 'gym\nconfidence', icon: 'shield-outline' as const },
               ].map(p => (
                 <View key={p.label} style={styles.progressCard}>
                   <Ionicons name={p.icon} size={19} color={Colors.green} />
@@ -199,10 +205,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 19, fontWeight: '700', letterSpacing: -0.3, color: Colors.labelPrimary },
   sectionAction: { fontSize: 14, fontWeight: '600', color: Colors.greenDeep },
   heroWrap: { paddingHorizontal: 20, marginBottom: 12 },
-  hero: {
-    borderRadius: 24, overflow: 'hidden', padding: 22,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.22, shadowRadius: 30,
-  },
+  hero: { borderRadius: 24, overflow: 'hidden', padding: 22, shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.22, shadowRadius: 30 },
   heroCornerGraphic: { position: 'absolute', right: 18, top: 18, opacity: 0.9 },
   heroContent: { gap: 0 },
   heroIconBox: { width: 50, height: 50, borderRadius: 15, backgroundColor: Colors.lime, alignItems: 'center', justifyContent: 'center', marginBottom: 52 },
@@ -212,17 +215,16 @@ const styles = StyleSheet.create({
   addManual: { height: 46, borderRadius: 14, borderWidth: 1.5, borderColor: Colors.separator, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   addManualText: { fontSize: 15, fontWeight: '600', color: Colors.labelPrimary },
   quickGrid: { flexDirection: 'row', gap: 12 },
-  quickCard: {
-    flex: 1, backgroundColor: '#fff', borderRadius: 18, padding: 15, gap: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
-  },
+  quickCard: { flex: 1, backgroundColor: '#fff', borderRadius: 18, padding: 15, gap: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
   quickIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
   quickTitle: { fontSize: 15, fontWeight: '600', color: Colors.labelPrimary, letterSpacing: -0.2 },
   quickSub: { fontSize: 12, color: Colors.labelSecondary },
-  recentCard: {
-    width: 150, backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
-  },
+  emptyWrap: { alignItems: 'center', paddingVertical: 30, paddingHorizontal: 20, gap: 8 },
+  emptyTitle: { fontSize: 16, fontWeight: '600', color: Colors.labelPrimary, marginTop: 8 },
+  emptySub: { fontSize: 14, color: Colors.labelSecondary, textAlign: 'center', lineHeight: 20 },
+  emptyBtn: { marginTop: 12, height: 42, paddingHorizontal: 20, borderRadius: 12, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: Colors.green },
+  emptyBtnText: { fontSize: 14, fontWeight: '600', color: Colors.greenDeep },
+  recentCard: { width: 150, backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
   recentImagePlaceholder: { height: 88, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
   recentInfo: { padding: 10, gap: 3 },
   recentName: { fontSize: 14, fontWeight: '600', color: Colors.labelPrimary, letterSpacing: -0.2 },
@@ -230,31 +232,8 @@ const styles = StyleSheet.create({
   recentStatus: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
   recentDot: { width: 6, height: 6, borderRadius: 3 },
   recentStatusText: { fontSize: 11, color: Colors.labelSecondary, fontWeight: '500' },
-  learnCard: {
-    backgroundColor: Colors.mist2, borderRadius: 20, padding: 14,
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    borderWidth: 1.5, borderColor: Colors.green,
-  },
-  learnImage: { width: 86, height: 86, borderRadius: 14, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  learnText: { flex: 1, gap: 4 },
-  learnBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: Colors.lime, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start', marginBottom: 4 },
-  learnBadgeText: { fontSize: 11, fontWeight: '700', color: Colors.ink },
-  learnTitle: { fontSize: 17, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.3 },
-  learnDesc: { fontSize: 13, color: Colors.labelSecondary, lineHeight: 18 },
-  libraryCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 13,
-    backgroundColor: '#fff', borderRadius: 16, padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
-  },
-  libraryIcon: { width: 40, height: 40, borderRadius: 11, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
-  libraryTitle: { fontSize: 15, fontWeight: '600', color: Colors.labelPrimary, letterSpacing: -0.2 },
-  librarySub: { fontSize: 12, color: Colors.labelSecondary, marginTop: 2 },
   progressGrid: { flexDirection: 'row', gap: 12 },
-  progressCard: {
-    flex: 1, backgroundColor: '#fff', borderRadius: 18,
-    paddingHorizontal: 14, paddingVertical: 15, gap: 8,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
-  },
+  progressCard: { flex: 1, backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 15, gap: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
   progressNum: { fontSize: 22, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.5 },
   progressLabel: { fontSize: 11, color: Colors.labelSecondary, lineHeight: 14 },
 });
