@@ -62,6 +62,8 @@ type PlacesContextType = {
   photoFor: (key: string, placeId?: string) => string | null;
   /** Stamp machines as just trained (called when a workout finishes). */
   markTrained: (keys: string[], placeId?: string | null) => Promise<void>;
+  /** Update the confidence status of a saved machine. */
+  setStatus: (key: string, status: SaveStatus, placeId?: string) => Promise<void>;
 };
 
 const PlacesContext = createContext<PlacesContextType | null>(null);
@@ -214,6 +216,15 @@ export function PlacesProvider({ children }: { children: React.ReactNode }) {
     ));
   };
 
+  const setStatus = async (key: string, status: SaveStatus, placeId?: string) => {
+    if (!user) return;
+    const pid = placeId ?? currentId;
+    const targets = saved.filter(s => s.key === key && (!pid || s.placeId === pid));
+    await Promise.all(targets.map(s =>
+      updateDoc(doc(db, 'users', user!.uid, 'saved', s.id), { status }).catch(() => {}),
+    ));
+  };
+
   const machineCount = (placeId: string) => saved.filter(s => s.placeId === placeId).length;
   const isSaved = (key: string, placeId?: string) => {
     const pid = placeId ?? currentId;
@@ -229,7 +240,7 @@ export function PlacesProvider({ children }: { children: React.ReactNode }) {
     <PlacesContext.Provider value={{
       loading, places, saved, currentId, current, currentMachines, recent,
       machineCount, isSaved, addPlace, renamePlace, deletePlace, setCurrent,
-      saveTo, removeFrom, toggle, registerCustom, setPhoto, photoFor, markTrained,
+      saveTo, removeFrom, toggle, registerCustom, setPhoto, photoFor, markTrained, setStatus,
     }}>
       {children}
     </PlacesContext.Provider>

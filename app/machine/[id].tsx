@@ -11,7 +11,12 @@ import { iconForKey } from '../../constants/machineIcon';
 export default function SavedMachineDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { saved, current, removeFrom } = usePlaces();
+  const { saved, current, removeFrom, setStatus } = usePlaces();
+  const STATUSES: { id: 'Scanned' | 'Tried once' | 'Comfortable'; label: string }[] = [
+    { id: 'Scanned', label: 'Just saw it' },
+    { id: 'Tried once', label: 'Tried once' },
+    { id: 'Comfortable', label: 'Comfortable' },
+  ];
 
   const entry = saved.find(s => s.id === id);
   if (!entry) {
@@ -58,7 +63,23 @@ export default function SavedMachineDetail() {
         </TouchableOpacity>
 
         <View style={styles.histCard}>
-          <Text style={styles.histTitle}>Your history</Text>
+          <Text style={styles.histTitle}>How comfortable are you?</Text>
+          <View style={styles.statusRow}>
+            {STATUSES.map(s => {
+              const on = entry.status === s.id;
+              return (
+                <TouchableOpacity
+                  key={s.id}
+                  style={[styles.statusPill, on && styles.statusPillOn]}
+                  onPress={() => setStatus(entry.key, s.id, entry.placeId)}
+                >
+                  <Text style={[styles.statusPillText, on && styles.statusPillTextOn]}>{s.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={[styles.histTitle, { marginTop: 6 }]}>Your history</Text>
           <View style={styles.histRow}>
             <View style={[styles.dot, { backgroundColor: entry.status === 'Comfortable' ? Colors.green : entry.status === 'Scanned' ? Colors.sky : Colors.amber }]} />
             <Text style={styles.histLabel}>{entry.status}</Text>
@@ -100,6 +121,11 @@ const styles = StyleSheet.create({
   primaryBtnText: { fontSize: 17, fontWeight: '600', color: '#fff' },
   histCard: { backgroundColor: '#fff', borderRadius: 18, padding: 16, gap: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
   histTitle: { fontSize: 16, fontWeight: '700', color: Colors.labelPrimary },
+  statusRow: { flexDirection: 'row', gap: 8 },
+  statusPill: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 12, backgroundColor: Colors.cloud, borderWidth: 1.5, borderColor: Colors.separator },
+  statusPillOn: { backgroundColor: Colors.green, borderColor: Colors.green },
+  statusPillText: { fontSize: 13, fontWeight: '600', color: Colors.labelSecondary },
+  statusPillTextOn: { color: '#fff' },
   histRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   histLabel: { fontSize: 14, color: Colors.labelPrimary, flex: 1 },

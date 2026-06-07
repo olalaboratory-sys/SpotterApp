@@ -117,10 +117,10 @@ export default function GuideScreen() {
           <LinearGradient colors={[Colors.ink2, Colors.ink]} style={StyleSheet.absoluteFill} />
           <SafeAreaView>
             <View style={styles.heroNav}>
-              <TouchableOpacity style={styles.heroBackBtn} onPress={() => router.back()}>
+              <TouchableOpacity style={styles.heroBackBtn} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
                 <Ionicons name="chevron-back" size={20} color="#fff" />
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.heroBackBtn, saved && { backgroundColor: Colors.green }]} onPress={onToggleSave}>
+              <TouchableOpacity style={[styles.heroBackBtn, saved && { backgroundColor: Colors.green }]} onPress={onToggleSave} accessibilityRole="button" accessibilityLabel={saved ? 'Remove from saved machines' : 'Save this machine'}>
                 <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={18} color="#fff" />
               </TouchableOpacity>
             </View>

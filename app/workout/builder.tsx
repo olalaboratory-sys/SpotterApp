@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { usePlaces } from '../../context/PlacesContext';
 import { useWorkouts } from '../../context/WorkoutsContext';
+import { useAuth } from '../../context/AuthContext';
 import { allMachines, getMachine } from '../../constants/machines';
 import { isFreeWeight } from '../../constants/catalog';
 import PlacePickerSheet from '../../components/PlacePickerSheet';
@@ -30,12 +31,24 @@ export default function WorkoutBuilder() {
   const router = useRouter();
   const { current, currentMachines } = usePlaces();
   const { startDraft } = useWorkouts();
+  const { userProfile } = useAuth();
 
   const [goal, setGoal] = useState(GOALS[0]);
   const [time, setTime] = useState(TIMES[1]);
   const [difficulty, setDifficulty] = useState(DIFFICULTY[0]);
   const [machineOnly, setMachineOnly] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Pre-select the goal that matches the user's profile (once, without
+  // clobbering a manual change).
+  const presetRef = useRef(false);
+  useEffect(() => {
+    if (presetRef.current || !userProfile) return;
+    presetRef.current = true;
+    const g = userProfile.goals ?? [];
+    if (g.includes('legs')) setGoal('Lower body');
+    else if (g.includes('upper') || g.includes('posture')) setGoal('Upper body');
+  }, [userProfile]);
 
   const available = useMemo(() => {
     const fromPlace = currentMachines.map(m => m.key);
@@ -59,6 +72,10 @@ export default function WorkoutBuilder() {
       pool = [...pool, ...extra];
     }
     const keys = pool.slice(0, time.count);
+    if (keys.length === 0) {
+      Alert.alert('No machines match', 'Try a different goal or turn off “Machines only”.');
+      return;
+    }
     const title = `${goal} · ${time.label}`;
     startDraft(keys, {
       goal, time: time.label, difficulty,

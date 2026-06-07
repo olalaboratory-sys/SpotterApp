@@ -95,13 +95,13 @@ function ScanScreen({ onCapture, onUpload, onClose }: { onCapture: () => void; o
       </View>
 
       <View style={styles.controls}>
-        <TouchableOpacity style={styles.sideBtn} onPress={onUpload}>
+        <TouchableOpacity style={styles.sideBtn} onPress={onUpload} accessibilityRole="button" accessibilityLabel="Upload a photo from your library">
           <Ionicons name="image-outline" size={20} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.captureBtn} onPress={onCapture}>
+        <TouchableOpacity style={styles.captureBtn} onPress={onCapture} accessibilityRole="button" accessibilityLabel="Capture photo to identify machine">
           <View style={styles.captureBtnInner} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.sideBtn} onPress={() => setFacing(f => (f === 'back' ? 'front' : 'back'))}>
+        <TouchableOpacity style={styles.sideBtn} onPress={() => setFacing(f => (f === 'back' ? 'front' : 'back'))} accessibilityRole="button" accessibilityLabel="Flip camera">
           <Ionicons name="camera-reverse-outline" size={20} color="#fff" />
         </TouchableOpacity>
       </View>

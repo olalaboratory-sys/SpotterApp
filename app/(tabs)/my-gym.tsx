@@ -49,7 +49,7 @@ export default function MyPlacesTab() {
               <Ionicons name="chevron-down" size={16} color={Colors.greenDeep} />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.headerAdd} onPress={() => setPickerOpen(true)}>
+          <TouchableOpacity style={styles.headerAdd} onPress={() => setPickerOpen(true)} accessibilityRole="button" accessibilityLabel="Switch or manage places">
             <Ionicons name="swap-horizontal" size={20} color={Colors.green} />
           </TouchableOpacity>
         </View>
