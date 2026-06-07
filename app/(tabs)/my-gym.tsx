@@ -1,19 +1,37 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { iconForKey } from '../../constants/machineIcon';
 import { usePlaces } from '../../context/PlacesContext';
 import PlacePickerSheet from '../../components/PlacePickerSheet';
+import SwipeableRow from '../../components/SwipeableRow';
+
+function trainedAgo(d: Date | null | undefined): string | null {
+  if (!d) return null;
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days <= 0) return 'Trained today';
+  if (days === 1) return 'Trained yesterday';
+  if (days < 7) return `Trained ${days}d ago`;
+  if (days < 30) return `Trained ${Math.floor(days / 7)}w ago`;
+  return 'Trained a while ago';
+}
 
 const FILTERS = ['All', 'Upper', 'Lower', 'Core'] as const;
 
 export default function MyPlacesTab() {
   const router = useRouter();
-  const { current, currentMachines, loading } = usePlaces();
+  const { current, currentMachines, loading, removeFrom } = usePlaces();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('All');
+
+  const confirmRemove = (m: (typeof currentMachines)[number]) => {
+    Alert.alert('Remove machine?', `Remove “${m.name}” from ${current?.name ?? 'this place'}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => removeFrom(m.placeId, m.key).catch(() => {}) },
+    ]);
+  };
 
   const machines = useMemo(
     () => (filter === 'All' ? currentMachines : currentMachines.filter(m => m.area === filter)),
@@ -63,26 +81,29 @@ export default function MyPlacesTab() {
             </View>
           ) : (
             <View style={styles.grid}>
-              {machines.map(m => (
-                <TouchableOpacity
-                  key={m.id}
-                  style={styles.card}
-                  activeOpacity={0.85}
-                  onPress={() => router.push({ pathname: '/machine/[id]', params: { id: m.id } })}
-                >
-                  <View style={styles.cardImage}>
-                    {m.photoUri
-                      ? <Image source={{ uri: m.photoUri }} style={styles.cardPhoto} resizeMode="cover" />
-                      : <Ionicons name={iconForKey(m.key)} size={34} color={Colors.green} />}
-                  </View>
-                  <Text style={styles.cardName} numberOfLines={1}>{m.name}</Text>
-                  <Text style={styles.cardCat} numberOfLines={1}>{m.cat}</Text>
-                  <View style={styles.cardStatus}>
-                    <View style={[styles.dot, { backgroundColor: m.status === 'Comfortable' ? Colors.green : m.status === 'Scanned' ? Colors.sky : Colors.amber }]} />
-                    <Text style={styles.cardStatusText}>{m.status}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {machines.map(m => {
+                const trained = trainedAgo(m.lastTrainedAt);
+                return (
+                  <SwipeableRow key={m.id} containerStyle={styles.cardWrap} style={styles.card} onDelete={() => confirmRemove(m)}>
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() => router.push({ pathname: '/machine/[id]', params: { id: m.id } })}
+                    >
+                      <View style={styles.cardImage}>
+                        {m.photoUri
+                          ? <Image source={{ uri: m.photoUri }} style={styles.cardPhoto} resizeMode="cover" />
+                          : <Ionicons name={iconForKey(m.key)} size={34} color={Colors.green} />}
+                      </View>
+                      <Text style={styles.cardName} numberOfLines={1}>{m.name}</Text>
+                      <Text style={styles.cardCat} numberOfLines={1}>{trained ?? m.cat}</Text>
+                      <View style={styles.cardStatus}>
+                        <View style={[styles.dot, { backgroundColor: m.status === 'Comfortable' ? Colors.green : m.status === 'Scanned' ? Colors.sky : Colors.amber }]} />
+                        <Text style={styles.cardStatusText}>{m.status}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </SwipeableRow>
+                );
+              })}
             </View>
           )}
         </ScrollView>
@@ -119,7 +140,8 @@ const styles = StyleSheet.create({
   filterText: { fontSize: 14, fontWeight: '600', color: Colors.labelSecondary },
   filterTextActive: { color: '#fff' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: 20 },
-  card: { width: '47%', flexGrow: 1, backgroundColor: '#fff', borderRadius: 18, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+  cardWrap: { width: '47%', flexGrow: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 18, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
   cardImage: { height: 80, borderRadius: 12, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center', marginBottom: 10, overflow: 'hidden' },
   cardPhoto: { width: '100%', height: '100%' },
   cardName: { fontSize: 15, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.2 },

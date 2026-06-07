@@ -4,6 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { useWorkouts } from '../../context/WorkoutsContext';
+import { usePlaces } from '../../context/PlacesContext';
 
 const FEELINGS = [
   { id: 'easy', label: 'Too easy', icon: 'happy-outline' as const },
@@ -14,7 +15,8 @@ const FEELINGS = [
 export default function WorkoutComplete() {
   const router = useRouter();
   const { full, completed, total, sets } = useLocalSearchParams<{ full: string; completed: string; total: string; sets: string }>();
-  const { completeWorkout } = useWorkouts();
+  const { completeWorkout, draft, meta } = useWorkouts();
+  const { markTrained } = usePlaces();
 
   const isFull = full === '1';
   const completedCount = Number(completed ?? 0);
@@ -30,6 +32,7 @@ export default function WorkoutComplete() {
     if (savedRef.current) return;
     savedRef.current = true;
     completeWorkout({ completedCount, totalCount, setsDone, feel: null }).catch(() => {});
+    markTrained(draft, meta.placeId).catch(() => {});
   }, []);
 
   return (

@@ -5,8 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { usePlaces } from '../context/PlacesContext';
 import { useWorkouts } from '../context/WorkoutsContext';
+import GoalRing from '../components/GoalRing';
 
 const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const WEEKLY_GOAL = 3;
 
 export default function ProgressScreen() {
   const router = useRouter();
@@ -29,6 +31,8 @@ export default function ProgressScreen() {
     return counts;
   }, [history]);
   const maxWeekly = Math.max(1, ...weekly);
+  const weekTotal = weekly.reduce((a, b) => a + b, 0);
+  const goalMet = weekTotal >= WEEKLY_GOAL;
 
   const learned = saved.filter(s => s.status === 'Comfortable');
   const totalSets = history.reduce((a, w) => a + w.setsDone, 0);
@@ -61,6 +65,19 @@ export default function ProgressScreen() {
 
           <View>
             <Text style={styles.sectionTitle}>This week</Text>
+            <View style={styles.goalCard}>
+              <GoalRing size={88} goal={WEEKLY_GOAL} done={weekTotal}>
+                <Text style={styles.ringNum}>{Math.min(weekTotal, WEEKLY_GOAL)}/{WEEKLY_GOAL}</Text>
+              </GoalRing>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.goalTitle}>{goalMet ? 'Weekly goal hit 🎉' : 'Weekly goal'}</Text>
+                <Text style={styles.goalSub}>
+                  {goalMet
+                    ? `${weekTotal} workout${weekTotal === 1 ? '' : 's'} this week — great consistency.`
+                    : `${weekTotal} of ${WEEKLY_GOAL} workouts done. ${WEEKLY_GOAL - weekTotal} to go.`}
+                </Text>
+              </View>
+            </View>
             <View style={styles.weekCard}>
               {weekly.map((c, i) => (
                 <View key={i} style={styles.barCol}>
@@ -125,6 +142,10 @@ const styles = StyleSheet.create({
   statNum: { fontSize: 26, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.6 },
   statLabel: { fontSize: 11, color: Colors.labelSecondary, lineHeight: 14 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: Colors.labelPrimary, marginBottom: 12, letterSpacing: -0.3 },
+  goalCard: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: '#fff', borderRadius: 18, padding: 18, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
+  ringNum: { fontSize: 19, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.5 },
+  goalTitle: { fontSize: 16, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.2 },
+  goalSub: { fontSize: 13, color: Colors.labelSecondary, marginTop: 3, lineHeight: 18 },
   weekCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', backgroundColor: '#fff', borderRadius: 18, padding: 18, height: 160, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
   barCol: { flex: 1, alignItems: 'center', gap: 8, height: '100%', justifyContent: 'flex-end' },
   barTrack: { width: 14, flex: 1, justifyContent: 'flex-end', borderRadius: 7, overflow: 'hidden', backgroundColor: '#f0f2eb' },

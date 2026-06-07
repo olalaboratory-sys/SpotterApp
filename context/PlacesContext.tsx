@@ -29,6 +29,7 @@ export type SavedMachine = {
   status: SaveStatus;
   photoUri?: string | null;
   savedAt: Date | null;
+  lastTrainedAt?: Date | null;
 };
 
 const CURRENT_KEY = 'spotter.currentPlaceId';
@@ -59,6 +60,8 @@ type PlacesContextType = {
   setPhoto: (key: string, uri: string, placeId?: string) => Promise<void>;
   /** Look up a saved photo for a machine in a place. */
   photoFor: (key: string, placeId?: string) => string | null;
+  /** Stamp machines as just trained (called when a workout finishes). */
+  markTrained: (keys: string[], placeId?: string | null) => Promise<void>;
 };
 
 const PlacesContext = createContext<PlacesContextType | null>(null);
@@ -107,7 +110,7 @@ export function PlacesProvider({ children }: { children: React.ReactNode }) {
     }, () => setPlacesLoaded(true));
 
     const unsubSaved = onSnapshot(savedCol, snap => {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data(), savedAt: toDate(d.data().savedAt) } as SavedMachine));
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data(), savedAt: toDate(d.data().savedAt), lastTrainedAt: toDate(d.data().lastTrainedAt) } as SavedMachine));
       list.sort((a, b) => (b.savedAt?.getTime() ?? 0) - (a.savedAt?.getTime() ?? 0));
       setSaved(list);
       setSavedLoaded(true);
@@ -202,6 +205,15 @@ export function PlacesProvider({ children }: { children: React.ReactNode }) {
     return hit?.photoUri ?? null;
   };
 
+  const markTrained = async (keys: string[], placeId?: string | null) => {
+    if (!user || !keys.length) return;
+    const pid = placeId ?? currentId;
+    const targets = saved.filter(s => keys.includes(s.key) && (!pid || s.placeId === pid));
+    await Promise.all(targets.map(s =>
+      updateDoc(doc(db, 'users', user!.uid, 'saved', s.id), { lastTrainedAt: serverTimestamp() }).catch(() => {}),
+    ));
+  };
+
   const machineCount = (placeId: string) => saved.filter(s => s.placeId === placeId).length;
   const isSaved = (key: string, placeId?: string) => {
     const pid = placeId ?? currentId;
@@ -217,7 +229,7 @@ export function PlacesProvider({ children }: { children: React.ReactNode }) {
     <PlacesContext.Provider value={{
       loading, places, saved, currentId, current, currentMachines, recent,
       machineCount, isSaved, addPlace, renamePlace, deletePlace, setCurrent,
-      saveTo, removeFrom, toggle, registerCustom, setPhoto, photoFor,
+      saveTo, removeFrom, toggle, registerCustom, setPhoto, photoFor, markTrained,
     }}>
       {children}
     </PlacesContext.Provider>

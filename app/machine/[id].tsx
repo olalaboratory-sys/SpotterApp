@@ -68,6 +68,13 @@ export default function SavedMachineDetail() {
             <Ionicons name="bookmark-outline" size={16} color={Colors.labelSecondary} />
             <Text style={styles.histLabel}>Saved to {current?.name ?? 'this place'}</Text>
           </View>
+          {entry.lastTrainedAt && (
+            <View style={styles.histRow}>
+              <Ionicons name="barbell-outline" size={16} color={Colors.labelSecondary} />
+              <Text style={styles.histLabel}>Last trained</Text>
+              <Text style={styles.histDate}>{entry.lastTrainedAt.toLocaleDateString()}</Text>
+            </View>
+          )}
         </View>
 
         <TouchableOpacity style={styles.removeBtn} onPress={remove}>
