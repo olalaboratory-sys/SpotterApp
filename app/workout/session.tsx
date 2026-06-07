@@ -15,6 +15,27 @@ import { getMachine, keyForName } from '../../constants/machines';
 const SETS_PER = 3;
 const REST_SECONDS = 60;
 
+/** A set tile that pops when it transitions to done. */
+function SetTile({ index, done }: { index: number; done: boolean }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const prev = useRef(done);
+  useEffect(() => {
+    if (done && !prev.current) {
+      scale.setValue(0.88);
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 4, tension: 140 }).start();
+    }
+    prev.current = done;
+  }, [done]);
+  return (
+    <Animated.View style={[styles.setTile, done && styles.setTileDone, { transform: [{ scale }] }]}>
+      <Text style={[styles.setTileNum, done && styles.setTileNumDone]}>Set {index + 1}</Text>
+      {done
+        ? <Ionicons name="checkmark-circle" size={20} color={Colors.lime} />
+        : <Text style={styles.setReps}>10 reps</Text>}
+    </Animated.View>
+  );
+}
+
 export default function WorkoutSession() {
   const router = useRouter();
   const { draft, swapInDraft } = useWorkouts();
@@ -127,12 +148,7 @@ export default function WorkoutSession() {
 
           <View style={styles.setRow}>
             {Array.from({ length: SETS_PER }).map((_, i) => (
-              <View key={i} style={[styles.setTile, i < setsForThis && styles.setTileDone]}>
-                <Text style={[styles.setTileNum, i < setsForThis && styles.setTileNumDone]}>Set {i + 1}</Text>
-                {i < setsForThis
-                  ? <Ionicons name="checkmark-circle" size={20} color={Colors.lime} />
-                  : <Text style={styles.setReps}>10 reps</Text>}
-              </View>
+              <SetTile key={i} index={i} done={i < setsForThis} />
             ))}
           </View>
 

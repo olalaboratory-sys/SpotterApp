@@ -1,10 +1,12 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, View } from 'react-native';
 import { Colors } from '../constants/colors';
 
 // A small, stylised front-facing body schematic. We don't ship react-native-svg,
 // so the figure is composed from plain Views; muscle-map keys light up the
 // matching region in lime. Keys come from constants/machines.ts `map`.
+// On mount the trained regions animate from dim to lit, drawing the eye to
+// what's being worked.
 
 const ON = Colors.lime;
 const OFF = 'rgba(255,255,255,0.12)';
@@ -22,8 +24,17 @@ export default function MuscleMap({ map }: { map: string[] }) {
   const hips = has(map, 'glutes');
   const thighs = has(map, 'quads', 'hamstrings');
   const calves = has(map, 'calves');
-
   const torsoTop = chest || back || shoulders;
+
+  const glow = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    glow.setValue(0);
+    Animated.timing(glow, { toValue: 1, duration: 550, delay: 120, useNativeDriver: false }).start();
+  }, [map]);
+
+  const lit = glow.interpolate({ inputRange: [0, 1], outputRange: [OFF, ON] });
+  // Active regions animate to lit; inactive stay dim.
+  const color = (active: boolean) => (active ? lit : OFF);
 
   return (
     <View style={styles.wrap}>
@@ -31,23 +42,23 @@ export default function MuscleMap({ map }: { map: string[] }) {
       <View style={styles.head} />
       {/* shoulders + arms row */}
       <View style={styles.shoulderRow}>
-        <View style={[styles.arm, { backgroundColor: arms ? ON : OFF }]} />
-        <View style={[styles.shoulders, { backgroundColor: shoulders ? ON : OFF }]} />
-        <View style={[styles.arm, { backgroundColor: arms ? ON : OFF }]} />
+        <Animated.View style={[styles.arm, { backgroundColor: color(arms) }]} />
+        <Animated.View style={[styles.shoulders, { backgroundColor: color(shoulders) }]} />
+        <Animated.View style={[styles.arm, { backgroundColor: color(arms) }]} />
       </View>
       {/* torso */}
-      <View style={[styles.torsoTop, { backgroundColor: torsoTop ? ON : OFF }]} />
-      <View style={[styles.torsoMid, { backgroundColor: core ? ON : OFF }]} />
+      <Animated.View style={[styles.torsoTop, { backgroundColor: color(torsoTop) }]} />
+      <Animated.View style={[styles.torsoMid, { backgroundColor: color(core) }]} />
       {/* hips */}
-      <View style={[styles.hips, { backgroundColor: hips ? ON : OFF }]} />
+      <Animated.View style={[styles.hips, { backgroundColor: color(hips) }]} />
       {/* legs */}
       <View style={styles.legRow}>
-        <View style={[styles.thigh, { backgroundColor: thighs ? ON : OFF }]} />
-        <View style={[styles.thigh, { backgroundColor: thighs ? ON : OFF }]} />
+        <Animated.View style={[styles.thigh, { backgroundColor: color(thighs) }]} />
+        <Animated.View style={[styles.thigh, { backgroundColor: color(thighs) }]} />
       </View>
       <View style={styles.legRow}>
-        <View style={[styles.calf, { backgroundColor: calves ? ON : OFF }]} />
-        <View style={[styles.calf, { backgroundColor: calves ? ON : OFF }]} />
+        <Animated.View style={[styles.calf, { backgroundColor: color(calves) }]} />
+        <Animated.View style={[styles.calf, { backgroundColor: color(calves) }]} />
       </View>
     </View>
   );
