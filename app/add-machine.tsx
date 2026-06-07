@@ -92,9 +92,10 @@ export default function AddMachineModal() {
     <View style={styles.screen}>
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <View style={styles.grabHandle} />
           <View style={styles.header}>
             <Text style={styles.title}>Add a machine</Text>
-            <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
+            <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Close">
               <Ionicons name="close" size={20} color={Colors.labelPrimary} />
             </TouchableOpacity>
           </View>
@@ -214,6 +215,7 @@ export default function AddMachineModal() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.cloud },
+  grabHandle: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: Colors.separator, marginTop: 8, marginBottom: 2 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: Colors.separator },
   title: { fontSize: 18, fontWeight: '700', color: Colors.labelPrimary },
   closeBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#f2f2f7', alignItems: 'center', justifyContent: 'center' },

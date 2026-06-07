@@ -39,14 +39,14 @@ function RootNavigator() {
   }, [user, userProfile, loading, segments, router]);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
+    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right', gestureEnabled: true }}>
+      <Stack.Screen name="index" options={{ animation: 'fade' }} />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(onboarding)" />
-      <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="paywall" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
       <Stack.Screen name="guide/[key]" />
-      <Stack.Screen name="add-machine" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="add-machine" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="library/index" />
       <Stack.Screen name="library/[category]" />
       <Stack.Screen name="place/[id]" />

@@ -77,9 +77,10 @@ export default function PaywallScreen() {
       <View style={styles.gridOverlay} />
 
       <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.grabHandle} />
         {/* Close */}
         <View style={styles.closeRow}>
-          <TouchableOpacity style={styles.closeBtn} onPress={handleStartTrial} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.closeBtn} onPress={handleStartTrial} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="close" size={18} color="rgba(255,255,255,0.8)" />
           </TouchableOpacity>
         </View>
@@ -218,6 +219,7 @@ export default function PaywallScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.ink },
   gridOverlay: { position: 'absolute', inset: 0, opacity: 0.3 },
+  grabHandle: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.25)', marginTop: 8 },
   closeRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: 4 },
   closeBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
   scroll: { flex: 1 },
