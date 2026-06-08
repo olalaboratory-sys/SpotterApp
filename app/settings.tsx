@@ -29,6 +29,7 @@ export default function SettingsScreen() {
 
   const [name, setName] = useState('');
   const [savingName, setSavingName] = useState(false);
+  const [nameFocused, setNameFocused] = useState(false);
   const [goals, setGoals] = useState<string[]>([]);
   const [experienceLevel, setExperienceLevel] = useState<string | null>(null);
   const [units, setUnits] = useState(UNITS[0]);
@@ -132,13 +133,15 @@ export default function SettingsScreen() {
             <Text style={styles.label}>Display name</Text>
             <View style={styles.nameRow}>
               <TextInput
-                style={styles.nameInput}
+                style={[styles.nameInput, nameFocused && styles.nameInputFocused]}
                 value={name}
                 onChangeText={setName}
                 placeholder="Your name"
                 placeholderTextColor={Colors.labelTertiary}
                 returnKeyType="done"
                 onSubmitEditing={saveName}
+                onFocus={() => setNameFocused(true)}
+                onBlur={() => setNameFocused(false)}
               />
               <TouchableOpacity
                 style={[styles.nameSave, (!name.trim() || name.trim() === (userProfile?.displayName ?? '')) && styles.nameSaveOff]}
@@ -274,6 +277,7 @@ const styles = StyleSheet.create({
   segTextActive: { color: Colors.labelPrimary },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   nameInput: { flex: 1, backgroundColor: Colors.cloud, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.separator, paddingHorizontal: 14, paddingVertical: 11, fontSize: 16, color: Colors.labelPrimary },
+  nameInputFocused: { borderColor: Colors.green, backgroundColor: Colors.mist2 },
   nameSave: { paddingHorizontal: 18, height: 44, borderRadius: 12, backgroundColor: Colors.green, alignItems: 'center', justifyContent: 'center' },
   nameSaveOff: { backgroundColor: Colors.separator },
   nameSaveText: { fontSize: 15, fontWeight: '700', color: '#fff' },

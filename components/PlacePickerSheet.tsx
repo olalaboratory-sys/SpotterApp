@@ -21,6 +21,7 @@ export default function PlacePickerSheet({ visible, onClose }: { visible: boolea
   const [type, setType] = useState<PlaceType>('gym');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [createFocused, setCreateFocused] = useState(false);
 
   // Keep the modal mounted through the exit animation; fade the backdrop in
   // place while only the sheet slides up/down.
@@ -85,11 +86,13 @@ export default function PlacePickerSheet({ visible, onClose }: { visible: boolea
         {creating ? (
           <View style={{ gap: 14 }}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, createFocused && styles.inputFocused]}
               placeholder="Place name (e.g. Anytime Fitness)"
               placeholderTextColor={Colors.labelTertiary}
               value={name}
               onChangeText={setName}
+              onFocus={() => setCreateFocused(true)}
+              onBlur={() => setCreateFocused(false)}
               autoFocus
             />
             <View style={styles.typeRow}>
@@ -187,6 +190,7 @@ const styles = StyleSheet.create({
   newIcon: { width: 40, height: 40, borderRadius: 11, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: Colors.green, borderStyle: 'dashed' },
   newText: { fontSize: 16, fontWeight: '600', color: Colors.greenDeep },
   input: { backgroundColor: '#fff', borderRadius: 14, borderWidth: 1.5, borderColor: Colors.separator, padding: 14, fontSize: 16, color: Colors.labelPrimary },
+  inputFocused: { borderColor: Colors.green, backgroundColor: Colors.mist2 },
   editInput: { flex: 1, fontSize: 16, fontWeight: '600', color: Colors.labelPrimary, borderBottomWidth: 1.5, borderBottomColor: Colors.green, paddingVertical: 2 },
   typeRow: { flexDirection: 'row', gap: 8 },
   typeBtn: { flex: 1, alignItems: 'center', gap: 5, paddingVertical: 12, borderRadius: 12, backgroundColor: '#fff', borderWidth: 1.5, borderColor: Colors.separator },

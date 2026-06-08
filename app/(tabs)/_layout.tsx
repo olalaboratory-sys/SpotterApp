@@ -2,10 +2,12 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { Platform } from 'react-native';
+import * as haptics from '../../lib/haptics';
 
 export default function TabLayout() {
   return (
     <Tabs
+      screenListeners={{ tabPress: () => haptics.tap() }}
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
