@@ -6,9 +6,11 @@
 // in development. The MatchResult shape is what the rest of the app consumes, so
 // swapping providers (or moving the call behind a server proxy) is a one-file change.
 
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { allMachines, getMachine, keyForName, MACHINES } from '../constants/machines';
 import { isFreeWeight } from '../constants/catalog';
-import { geminiApiKey, geminiModel } from './firebaseConfig';
+import { geminiApiKey, geminiModel, useRecognitionProxy } from './firebaseConfig';
+import { app } from './firebase';
 
 export type Match = { key: string; confidence: number };
 export type MatchResult = {
@@ -19,18 +21,46 @@ export type MatchResult = {
 /** A captured/picked, downscaled image ready to send for recognition. */
 export type ScanImage = { base64: string; mime: string };
 
+/** Thrown when the server-side daily scan limit has been reached. */
+export class ScanLimitError extends Error {
+  constructor() { super('scan-limit'); this.name = 'ScanLimitError'; }
+}
+
 const keyConfigured = () => !!geminiApiKey && !geminiApiKey.startsWith('REPLACE');
 
 export async function analyzePhoto(image?: ScanImage): Promise<MatchResult> {
+  // Preferred: secure Cloud Function proxy (key hidden, limit enforced server-side).
+  if (image && useRecognitionProxy) {
+    return recognizeViaProxy(image);
+  }
+  // Dev/testing: call Gemini directly with a client key.
   if (image && keyConfigured()) {
     try {
       return await geminiRecognize(image);
     } catch {
-      // Network/parse error — degrade gracefully to the stub rather than blocking.
       return stubResult();
     }
   }
   return stubResult();
+}
+
+// ---- Cloud Function proxy --------------------------------------------------
+
+async function recognizeViaProxy(image: ScanImage): Promise<MatchResult> {
+  try {
+    const fn = httpsCallable(getFunctions(app), 'recognizeMachine');
+    const catalog = scannableCatalog().map(m => ({ key: m.key, name: m.name }));
+    const res = await fn({ image: image.base64, mime: image.mime, catalog });
+    const data = res.data as MatchResult;
+    if (!data?.top?.key || !MACHINES[data.top.key]) throw new Error('bad result');
+    return data;
+  } catch (e: any) {
+    if (e?.code === 'functions/resource-exhausted' || e?.code === 'resource-exhausted') {
+      throw new ScanLimitError();
+    }
+    // Other failures (network/parse) — degrade to stub rather than blocking.
+    return stubResult();
+  }
 }
 
 // ---- Gemini Flash ----------------------------------------------------------

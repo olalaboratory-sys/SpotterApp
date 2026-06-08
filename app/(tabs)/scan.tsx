@@ -11,7 +11,7 @@ import { Colors } from '../../constants/colors';
 import { iconForIllo } from '../../constants/machineIcon';
 import * as haptics from '../../lib/haptics';
 import { getMachine } from '../../constants/machines';
-import { analyzePhoto, MatchResult, ScanImage } from '../../lib/recognition';
+import { analyzePhoto, MatchResult, ScanImage, ScanLimitError } from '../../lib/recognition';
 import { dailyScanLimit, scansUsedToday, recordScan, PREMIUM_DAILY_SCANS } from '../../lib/scanLimit';
 import { usePlaces } from '../../context/PlacesContext';
 import { useAuth } from '../../context/AuthContext';
@@ -253,31 +253,40 @@ export default function ScanTab() {
 
   const isPremium = userProfile?.subscriptionStatus === 'active';
 
-  // Enforce the daily scan cap, then capture/pick → analyze.
-  const runScan = async (getImage: () => Promise<ScanImage | null>) => {
+  const notifyLimit = () => {
     const limit = dailyScanLimit(isPremium);
-    const used = await scansUsedToday();
-    if (used >= limit) {
-      if (isPremium) {
-        Alert.alert('Daily limit reached', `You've used all ${limit} scans today. It resets tomorrow.`);
-      } else {
-        Alert.alert(
-          'Daily scan limit reached',
-          `Your plan includes ${limit} scans a day. Go Premium for ${PREMIUM_DAILY_SCANS} scans a day.`,
-          [{ text: 'Not now', style: 'cancel' }, { text: 'Go Premium', onPress: () => router.push('/paywall') }],
-        );
-      }
-      return;
+    if (isPremium) {
+      Alert.alert('Daily limit reached', `You've used all ${limit} scans today. It resets tomorrow.`);
+    } else {
+      Alert.alert(
+        'Daily scan limit reached',
+        `Your plan includes ${limit} scans a day. Go Premium for ${PREMIUM_DAILY_SCANS} scans a day.`,
+        [{ text: 'Not now', style: 'cancel' }, { text: 'Go Premium', onPress: () => router.push('/paywall') }],
+      );
     }
+  };
+
+  // Fast client pre-check, then capture/pick → analyze (server enforces the
+  // authoritative cap when the proxy is enabled).
+  const runScan = async (getImage: () => Promise<ScanImage | null>) => {
+    const used = await scansUsedToday();
+    if (used >= dailyScanLimit(isPremium)) { notifyLimit(); return; }
+
     setPhase('loading');
     const image = await getImage();
     if (!image || !image.base64) { setPhase('ready'); return; }
     await recordScan();
-    const r = await analyzePhoto(image);
-    setResult(r);
-    setPhase('result');
-    if (r.top.confidence >= 70) haptics.success();
-    else haptics.warn();
+    try {
+      const r = await analyzePhoto(image);
+      setResult(r);
+      setPhase('result');
+      if (r.top.confidence >= 70) haptics.success();
+      else haptics.warn();
+    } catch (e) {
+      setPhase('ready');
+      if (e instanceof ScanLimitError) notifyLimit();
+      else Alert.alert('Scan failed', 'Something went wrong. Please try again.');
+    }
   };
 
   const viewGuide = (key: string) => {

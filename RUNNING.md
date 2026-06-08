@@ -1,3 +1,41 @@
+# Machine recognition — Gemini Flash
+
+Scanning turns a photo into a machine. There are two ways to wire it; the app
+works without either (it falls back to a local stub).
+
+## Option A — quick test (client key, NOT for production)
+Put your key in `lib/firebaseConfig.ts` → `geminiApiKey`. Leave
+`useRecognitionProxy = false`. The app calls Gemini directly. Fine for your own
+testing, but the key can be extracted from a shipped app.
+
+## Option B — secure proxy (recommended for release)
+The key stays on a Firebase Cloud Function; auth + the daily scan cap are
+enforced server-side (can't be bypassed by tampering with the app).
+
+```bash
+# one-time
+npm i -g firebase-tools
+firebase login
+firebase use --add            # pick your Firebase project
+
+# install + set the secret (from https://aistudio.google.com/apikey)
+cd functions && npm install && cd ..
+firebase functions:secrets:set GEMINI_API_KEY     # paste your key
+
+# deploy (needs the Blaze plan — pay-as-you-go)
+firebase deploy --only functions
+```
+
+Then in `lib/firebaseConfig.ts` set **`useRecognitionProxy = true`** and rebuild
+the app. Scans now go through `recognizeMachine` (region us-central1 by default).
+
+Caps live in `functions/src/index.ts` (`FREE_DAILY` 10 / `PREMIUM_DAILY` 100) and
+in `lib/scanLimit.ts` for the instant client-side pre-check. Per-user usage is
+stored at `users/{uid}/scanUsage/{YYYY-MM-DD}` (covered by your existing
+Firestore rules).
+
+---
+
 # Running Spotter on a device / simulator
 
 Spotter is a managed Expo app and every native module it uses (camera,
