@@ -67,6 +67,8 @@ type PlacesContextType = {
   markTrained: (keys: string[], placeId?: string | null) => Promise<void>;
   /** Update the confidence status of a saved machine. */
   setStatus: (key: string, status: SaveStatus, placeId?: string) => Promise<void>;
+  /** Move a saved machine (by its doc id) to a different place. */
+  moveSavedMachine: (savedId: string, toPlaceId: string) => Promise<void>;
 };
 
 const PlacesContext = createContext<PlacesContextType | null>(null);
@@ -246,6 +248,21 @@ export function PlacesProvider({ children }: { children: React.ReactNode }) {
     } catch { toast("Couldn't update status.", 'error'); }
   };
 
+  const moveSavedMachine = async (savedId: string, toPlaceId: string) => {
+    if (!user) return;
+    const entry = saved.find(s => s.id === savedId);
+    if (!entry || entry.placeId === toPlaceId) return;
+    // If the target place already has this machine, just drop the duplicate.
+    const dup = saved.find(s => s.placeId === toPlaceId && s.key === entry.key && s.id !== savedId);
+    try {
+      if (dup) {
+        await deleteDoc(doc(db, 'users', user.uid, 'saved', savedId));
+      } else {
+        await updateDoc(doc(db, 'users', user.uid, 'saved', savedId), { placeId: toPlaceId });
+      }
+    } catch { toast("Couldn't move that machine.", 'error'); }
+  };
+
   const machineCount = (placeId: string) => saved.filter(s => s.placeId === placeId).length;
   const isSaved = (key: string, placeId?: string) => {
     const pid = placeId ?? currentId;
@@ -261,7 +278,7 @@ export function PlacesProvider({ children }: { children: React.ReactNode }) {
     <PlacesContext.Provider value={{
       loading, places, saved, currentId, current, currentMachines, recent,
       machineCount, isSaved, addPlace, renamePlace, deletePlace, setCurrent,
-      saveTo, removeFrom, toggle, registerCustom, setPhoto, photoFor, markTrained, setStatus,
+      saveTo, removeFrom, toggle, registerCustom, setPhoto, photoFor, markTrained, setStatus, moveSavedMachine,
     }}>
       {children}
     </PlacesContext.Provider>

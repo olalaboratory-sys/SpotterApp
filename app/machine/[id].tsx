@@ -12,7 +12,7 @@ import * as haptics from '../../lib/haptics';
 export default function SavedMachineDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { saved, current, removeFrom, setStatus } = usePlaces();
+  const { saved, places, current, removeFrom, setStatus, moveSavedMachine } = usePlaces();
   const STATUSES: { id: 'Scanned' | 'Tried once' | 'Comfortable'; label: string }[] = [
     { id: 'Scanned', label: 'Just saw it' },
     { id: 'Tried once', label: 'Tried once' },
@@ -30,10 +30,24 @@ export default function SavedMachineDetail() {
   }
 
   const machine = getMachine(entry.key);
+  const placeName = places.find(p => p.id === entry.placeId)?.name ?? current?.name ?? 'this place';
+
   const remove = () => {
-    Alert.alert('Remove from place', `Remove ${entry.name} from ${current?.name ?? 'this place'}?`, [
+    Alert.alert('Remove from place', `Remove ${entry.name} from ${placeName}?`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: async () => { await removeFrom(entry.placeId, entry.key); router.back(); } },
+    ]);
+  };
+
+  const move = () => {
+    const others = places.filter(p => p.id !== entry.placeId);
+    if (others.length === 0) {
+      Alert.alert('No other places', 'Add another place first to move this machine.');
+      return;
+    }
+    Alert.alert('Move to another place', `Move ${entry.name} to…`, [
+      ...others.map(p => ({ text: p.name, onPress: () => moveSavedMachine(entry.id, p.id) })),
+      { text: 'Cancel', style: 'cancel' as const },
     ]);
   };
 
@@ -86,10 +100,14 @@ export default function SavedMachineDetail() {
             <Text style={styles.histLabel}>{entry.status}</Text>
             <Text style={styles.histDate}>{entry.savedAt ? entry.savedAt.toLocaleDateString() : 'Recently'}</Text>
           </View>
-          <View style={styles.histRow}>
+          <TouchableOpacity style={styles.histRow} onPress={move} activeOpacity={0.7}>
             <Ionicons name="bookmark-outline" size={16} color={Colors.labelSecondary} />
-            <Text style={styles.histLabel}>Saved to {current?.name ?? 'this place'}</Text>
-          </View>
+            <Text style={styles.histLabel}>Saved to {placeName}</Text>
+            <View style={styles.moveBtn}>
+              <Ionicons name="swap-horizontal" size={14} color={Colors.greenDeep} />
+              <Text style={styles.moveBtnText}>Move</Text>
+            </View>
+          </TouchableOpacity>
           {entry.lastTrainedAt && (
             <View style={styles.histRow}>
               <Ionicons name="barbell-outline" size={16} color={Colors.labelSecondary} />
@@ -130,6 +148,8 @@ const styles = StyleSheet.create({
   histRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   histLabel: { fontSize: 14, color: Colors.labelPrimary, flex: 1 },
+  moveBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, height: 28, borderRadius: 100, backgroundColor: Colors.mist },
+  moveBtnText: { fontSize: 12, fontWeight: '700', color: Colors.greenDeep },
   histDate: { fontSize: 12, color: Colors.labelTertiary },
   removeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 50, borderRadius: 14, backgroundColor: '#fff' },
   removeText: { fontSize: 15, fontWeight: '600', color: '#FF3B30' },

@@ -193,7 +193,7 @@ export default function GuideScreen() {
                   <View style={styles.quickItemIcon}>
                     <Ionicons name="information-circle-outline" size={18} color="#5a7a05" />
                   </View>
-                  <View>
+                  <View style={{ flex: 1 }}>
                     <Text style={styles.quickItemKey}>{q.k}</Text>
                     <Text style={styles.quickItemVal}>{q.v}</Text>
                   </View>
