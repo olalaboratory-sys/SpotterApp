@@ -418,7 +418,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     ],
     setup: [
       'Set the cable to the top and attach a straight bar.',
-      'Stand back, hinge slightly at the hips.',
+      'Stand back and hinge slightly at the hips — push your hips back, soft knees, flat back.',
       'Hold the bar with straight arms above you.',
     ],
     movement: [

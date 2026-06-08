@@ -3366,7 +3366,7 @@ export const MACHINES: Record<string, Machine> = {
     ],
     "setup": [
       "Stand with feet shoulder-width and the kettlebell a foot in front of you.",
-      "Hinge at your hips and grab the handle with both hands.",
+      "Hinge at your hips — push your hips back with soft knees and a flat back — and grab the handle with both hands.",
       "Flatten your back and brace your core.",
       "Hike the bell back between your legs to start."
     ],
