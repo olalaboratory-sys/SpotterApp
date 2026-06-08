@@ -132,7 +132,9 @@ export default function MyPlacesTab() {
               <Text style={styles.emptySub}>Tap “Add a machine” to scan, search, or add one by hand.</Text>
             </View>
           ) : (
-            <View style={styles.grid}>
+            <>
+              <Text style={styles.gridHint}>Swipe or long-press a machine to remove it</Text>
+              <View style={styles.grid}>
               {machines.map(m => {
                 const trained = trainedAgo(m.lastTrainedAt);
                 return (
@@ -140,6 +142,7 @@ export default function MyPlacesTab() {
                     <TouchableOpacity
                       activeOpacity={0.85}
                       onPress={() => router.push({ pathname: '/machine/[id]', params: { id: m.id } })}
+                      onLongPress={() => confirmRemove(m)}
                     >
                       <View style={styles.cardImage}>
                         {m.photoUri
@@ -163,7 +166,8 @@ export default function MyPlacesTab() {
                   </SwipeableRow>
                 );
               })}
-            </View>
+              </View>
+            </>
           )}
         </ScrollView>
 
@@ -203,6 +207,7 @@ const styles = StyleSheet.create({
   filterTextActive: { color: '#fff' },
   filterCount: { fontSize: 12, fontWeight: '700', color: Colors.labelTertiary, minWidth: 14, textAlign: 'center' },
   filterCountActive: { color: 'rgba(255,255,255,0.7)' },
+  gridHint: { fontSize: 12, color: Colors.labelTertiary, paddingHorizontal: 20, marginBottom: 10 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: 20 },
   cardWrap: { width: '47%', flexGrow: 1, maxWidth: '48.5%' },
   card: { backgroundColor: '#fff', borderRadius: 18, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },

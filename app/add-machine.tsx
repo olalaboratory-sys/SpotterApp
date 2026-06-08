@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  SafeAreaView, KeyboardAvoidingView, Platform, Alert, ScrollView,
+  SafeAreaView, Alert, ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { searchMachines } from '../constants/catalog';
 import { Machine } from '../constants/machines';
 import { iconForKey } from '../constants/machineIcon';
 import * as haptics from '../lib/haptics';
+import PlacePickerSheet from '../components/PlacePickerSheet';
 
 type Mode = 'find' | 'custom';
 
@@ -43,6 +44,7 @@ export default function AddMachineModal() {
   // find mode
   const [q, setQ] = useState('');
   const [focused, setFocused] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const results = useMemo(() => (q.trim() ? searchMachines(q) : []), [q]);
 
   // custom mode
@@ -95,7 +97,7 @@ export default function AddMachineModal() {
   return (
     <View style={styles.screen}>
       <SafeAreaView style={{ flex: 1 }}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <View style={{ flex: 1 }}>
           <View style={styles.grabHandle} />
           <View style={styles.header}>
             <Text style={styles.title}>Add a machine</Text>
@@ -104,12 +106,17 @@ export default function AddMachineModal() {
             </TouchableOpacity>
           </View>
 
-          {current && (
-            <View style={styles.banner}>
-              <Ionicons name="bookmark" size={14} color={Colors.greenDeep} />
-              <Text style={styles.bannerText}>Adding to {current.name}</Text>
+          <TouchableOpacity style={styles.destCard} activeOpacity={0.85} onPress={() => setPickerOpen(true)}>
+            <View style={styles.destIcon}><Ionicons name="business-outline" size={20} color={Colors.greenDeep} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.destLabel}>SAVING TO</Text>
+              <Text style={styles.destName} numberOfLines={1}>{current?.name ?? 'Choose a place'}</Text>
             </View>
-          )}
+            <View style={styles.destChange}>
+              <Ionicons name="swap-horizontal" size={15} color={Colors.greenDeep} />
+              <Text style={styles.destChangeText}>Change</Text>
+            </View>
+          </TouchableOpacity>
 
           <TouchableOpacity style={styles.scanRow} onPress={() => router.replace('/(tabs)/scan')}>
             <View style={styles.scanIcon}><Ionicons name="scan-outline" size={22} color={Colors.ink} /></View>
@@ -143,7 +150,7 @@ export default function AddMachineModal() {
                   onBlur={() => setFocused(null)}
                 />
               </View>
-              <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 4, gap: 10 }} keyboardShouldPersistTaps="handled">
+              <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 4, gap: 10 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
                 {results.map(m => {
                   const saved = current ? isSaved(m.key, current.id) : false;
                   return (
@@ -176,7 +183,7 @@ export default function AddMachineModal() {
               </ScrollView>
             </>
           ) : (
-            <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 8 }} keyboardShouldPersistTaps="handled">
+            <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 8, paddingBottom: 40 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
               <Text style={styles.label}>Equipment type</Text>
               <View style={styles.typeGrid}>
                 {EQUIP_TYPES.map(t => (
@@ -215,8 +222,9 @@ export default function AddMachineModal() {
               </TouchableOpacity>
             </ScrollView>
           )}
-        </KeyboardAvoidingView>
+        </View>
       </SafeAreaView>
+      <PlacePickerSheet visible={pickerOpen} onClose={() => setPickerOpen(false)} />
     </View>
   );
 }
@@ -227,8 +235,12 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: Colors.separator },
   title: { fontSize: 18, fontWeight: '700', color: Colors.labelPrimary },
   closeBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#f2f2f7', alignItems: 'center', justifyContent: 'center' },
-  banner: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', marginTop: 12, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 100, backgroundColor: Colors.mist },
-  bannerText: { fontSize: 13, fontWeight: '600', color: Colors.greenInk },
+  destCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 20, marginTop: 14, padding: 14, borderRadius: 16, backgroundColor: '#fff', borderWidth: 1.5, borderColor: Colors.green },
+  destIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
+  destLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1.2, color: Colors.labelTertiary },
+  destName: { fontSize: 16, fontWeight: '700', color: Colors.labelPrimary, marginTop: 2, letterSpacing: -0.2 },
+  destChange: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, height: 32, borderRadius: 100, backgroundColor: Colors.mist },
+  destChangeText: { fontSize: 13, fontWeight: '600', color: Colors.greenDeep },
   scanRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 20, marginTop: 14, padding: 14, borderRadius: 16, backgroundColor: Colors.lime },
   scanIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(12,15,22,0.12)', alignItems: 'center', justifyContent: 'center' },
   scanTitle: { fontSize: 16, fontWeight: '700', color: Colors.ink },

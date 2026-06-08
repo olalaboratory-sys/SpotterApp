@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Pressable, Alert, Animated, Easing,
+  View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Pressable, Alert, Animated, Easing, Keyboard, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
@@ -22,6 +22,16 @@ export default function PlacePickerSheet({ visible, onClose }: { visible: boolea
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [createFocused, setCreateFocused] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Lift the sheet above the keyboard so the name field stays visible.
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvt, e => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener(hideEvt, () => setKeyboardHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
 
   // Keep the modal mounted through the exit animation; fade the backdrop in
   // place while only the sheet slides up/down.
@@ -72,7 +82,7 @@ export default function PlacePickerSheet({ visible, onClose }: { visible: boolea
         <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: anim }]}>
           <Pressable style={{ flex: 1 }} onPress={close} />
         </Animated.View>
-        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
+        <Animated.View style={[styles.sheet, { marginBottom: keyboardHeight, transform: [{ translateY }] }]}>
           <View style={styles.handle} />
         <View style={styles.headerRow}>
           <Text style={styles.title}>{creating ? 'New place' : manage ? 'Manage places' : 'My places'}</Text>
