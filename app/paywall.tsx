@@ -1,13 +1,36 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity,
-  ScrollView, NativeScrollEvent, NativeSyntheticEvent, ActivityIndicator,
+  ScrollView, NativeScrollEvent, NativeSyntheticEvent, ActivityIndicator, Alert, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
+import { purchasePlan, restorePurchases, PlanId } from '../lib/purchases';
+import PressableScale from '../components/PressableScale';
+import * as haptics from '../lib/haptics';
+
+/** A benefit row that fades + slides in on mount, staggered by index. */
+function BenefitRow({ icon, title, sub, index }: { icon: keyof typeof Ionicons.glyphMap; title: string; sub: string; index: number }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(anim, { toValue: 1, duration: 380, delay: 120 + index * 90, useNativeDriver: true }).start();
+  }, []);
+  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] });
+  return (
+    <Animated.View style={[styles.benefitRow, { opacity: anim, transform: [{ translateY }] }]}>
+      <View style={styles.benefitIcon}>
+        <Ionicons name={icon} size={18} color={Colors.lime} />
+      </View>
+      <View style={styles.benefitText}>
+        <Text style={styles.benefitTitle}>{title}</Text>
+        <Text style={styles.benefitSub}>{sub}</Text>
+      </View>
+    </Animated.View>
+  );
+}
 
 const PLANS = [
   { id: 'monthly', name: 'Monthly', price: '$2.99', per: '/mo', sub: 'Billed monthly', trial: true },
@@ -16,7 +39,7 @@ const PLANS = [
 ];
 
 const BENEFITS = [
-  { icon: 'scan-outline' as const, title: 'Unlimited machine scans', sub: 'No daily limits — scan everything' },
+  { icon: 'scan-outline' as const, title: '100 machine scans a day', sub: 'Plenty for any gym session (free: 10/day)' },
   { icon: 'list-outline' as const, title: 'Personalized machine workouts', sub: 'Built from the machines at your gym' },
   { icon: 'bookmark-outline' as const, title: 'Offline machine guides', sub: 'Works even with no signal at the gym' },
   { icon: 'locate-outline' as const, title: 'Full progress tracking', sub: 'Confidence, weights, history' },
@@ -31,7 +54,7 @@ const TRIAL = [
 
 export default function PaywallScreen() {
   const router = useRouter();
-  const { startTrial } = useAuth();
+  const { startTrial, activateSubscription } = useAuth();
   const [plan, setPlan] = useState('monthly');
   const [seen, setSeen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -40,13 +63,28 @@ export default function PaywallScreen() {
     if (!seen) return;
     setSaving(true);
     try {
-      await startTrial(plan);
+      const res = await purchasePlan(plan as PlanId);
+      // Lifetime is an immediate purchase → activate now; subscriptions start a trial.
+      if (res.success) await (plan === 'lifetime' ? activateSubscription(plan) : startTrial(plan));
       router.replace('/(tabs)');
     } catch {
       router.replace('/(tabs)');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleRestore = async () => {
+    const res = await restorePurchases();
+    Alert.alert(
+      res.restored ? 'Purchases restored' : 'Nothing to restore',
+      res.restored ? 'Your Premium access is active again.' : "We couldn't find a previous purchase for this Apple ID.",
+    );
+  };
+
+  const onLegal = (label: string) => {
+    if (label === 'Restore') return handleRestore();
+    router.push({ pathname: '/legal/[doc]', params: { doc: label === 'Terms' ? 'terms' : 'privacy' } });
   };
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -62,9 +100,10 @@ export default function PaywallScreen() {
       <View style={styles.gridOverlay} />
 
       <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.grabHandle} />
         {/* Close */}
         <View style={styles.closeRow}>
-          <TouchableOpacity style={styles.closeBtn} onPress={handleStartTrial} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.closeBtn} onPress={handleStartTrial} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Close">
             <Ionicons name="close" size={18} color="rgba(255,255,255,0.8)" />
           </TouchableOpacity>
         </View>
@@ -94,17 +133,14 @@ export default function PaywallScreen() {
 
           {/* Benefits */}
           <View style={styles.benefits}>
-            {BENEFITS.map(b => (
-              <View key={b.title} style={styles.benefitRow}>
-                <View style={styles.benefitIcon}>
-                  <Ionicons name={b.icon} size={18} color={Colors.lime} />
-                </View>
-                <View style={styles.benefitText}>
-                  <Text style={styles.benefitTitle}>{b.title}</Text>
-                  <Text style={styles.benefitSub}>{b.sub}</Text>
-                </View>
-              </View>
+            {BENEFITS.map((b, i) => (
+              <BenefitRow key={b.title} icon={b.icon} title={b.title} sub={b.sub} index={i} />
             ))}
+          </View>
+
+          <View style={styles.scanNote}>
+            <Ionicons name="information-circle-outline" size={15} color={Colors.lime} />
+            <Text style={styles.scanNoteText}>Free & trial: 10 machine scans/day · Premium: 100/day</Text>
           </View>
 
           {/* Trial timeline */}
@@ -131,11 +167,11 @@ export default function PaywallScreen() {
             {PLANS.map(p => {
               const on = plan === p.id;
               return (
-                <TouchableOpacity
+                <PressableScale
                   key={p.id}
+                  scaleTo={0.98}
                   style={[styles.planCard, on && styles.planCardSelected]}
-                  onPress={() => setPlan(p.id)}
-                  activeOpacity={0.85}
+                  onPress={() => { if (!on) haptics.tap(); setPlan(p.id); }}
                 >
                   {p.badge && (
                     <View style={styles.planBadge}>
@@ -159,7 +195,7 @@ export default function PaywallScreen() {
                       <Text style={styles.planPer}>{p.per}</Text>
                     </View>
                   </View>
-                </TouchableOpacity>
+                </PressableScale>
               );
             })}
           </View>
@@ -189,7 +225,7 @@ export default function PaywallScreen() {
           </Text>
           <View style={styles.legalRow}>
             {['Restore', 'Terms', 'Privacy'].map(l => (
-              <TouchableOpacity key={l} style={styles.legalBtn}>
+              <TouchableOpacity key={l} style={styles.legalBtn} onPress={() => onLegal(l)}>
                 <Text style={styles.legalText}>{l}</Text>
               </TouchableOpacity>
             ))}
@@ -203,6 +239,7 @@ export default function PaywallScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.ink },
   gridOverlay: { position: 'absolute', inset: 0, opacity: 0.3 },
+  grabHandle: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.25)', marginTop: 8 },
   closeRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: 4 },
   closeBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
   scroll: { flex: 1 },
@@ -213,7 +250,9 @@ const styles = StyleSheet.create({
   heroTitle: { fontSize: 30, fontWeight: '700', letterSpacing: -0.7, color: '#fff', textAlign: 'center', lineHeight: 36 },
   heroLime: { color: Colors.lime },
   heroSub: { fontSize: 15, color: 'rgba(223,247,231,0.66)', textAlign: 'center', lineHeight: 22, maxWidth: 290 },
-  benefits: { gap: 14, paddingBottom: 24 },
+  benefits: { gap: 14, paddingBottom: 16 },
+  scanNote: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(201,251,78,0.1)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 22 },
+  scanNoteText: { flex: 1, fontSize: 12, fontWeight: '600', color: 'rgba(231,236,245,0.85)' },
   benefitRow: { flexDirection: 'row', gap: 13, alignItems: 'flex-start' },
   benefitIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   benefitText: { flex: 1 },

@@ -1,71 +1,229 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
+import { iconForKey } from '../../constants/machineIcon';
+import { usePlaces } from '../../context/PlacesContext';
+import PlacePickerSheet from '../../components/PlacePickerSheet';
+import SwipeableRow from '../../components/SwipeableRow';
+import Skeleton from '../../components/Skeleton';
 
-export default function MyGymTab() {
+/** Short relative label for the last-trained timestamp (e.g. "today", "3d ago"). */
+function trainedAgo(d: Date | null | undefined): string | null {
+  if (!d) return null;
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return 'a while ago';
+}
+
+const FILTERS = ['All', 'Upper', 'Lower', 'Core'] as const;
+const PLACE_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
+  gym: 'barbell-outline', home: 'home-outline', hotel: 'bed-outline', other: 'ellipsis-horizontal',
+};
+
+export default function MyPlacesTab() {
+  const router = useRouter();
+  const { current, currentMachines, loading, removeFrom } = usePlaces();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]>('All');
+
+  const confirmRemove = (m: (typeof currentMachines)[number]) => {
+    Alert.alert('Remove machine?', `Remove “${m.name}” from ${current?.name ?? 'this place'}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => removeFrom(m.placeId, m.key).catch(() => {}) },
+    ]);
+  };
+
+  // Per-area counts drive the filter chips (only show areas that have machines).
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { All: currentMachines.length, Upper: 0, Lower: 0, Core: 0 };
+    currentMachines.forEach(m => { if (m.area in c) c[m.area] += 1; });
+    return c;
+  }, [currentMachines]);
+
+  const visibleFilters = useMemo(
+    () => FILTERS.filter(f => f === 'All' || counts[f] > 0),
+    [counts],
+  );
+
+  // If the active filter's area empties out, fall back to All.
+  useEffect(() => {
+    if (!visibleFilters.includes(filter)) setFilter('All');
+  }, [visibleFilters, filter]);
+
+  const confidentCount = currentMachines.filter(m => m.status === 'Comfortable').length;
+  const placeIcon = PLACE_ICON[current?.type ?? 'gym'] ?? 'barbell-outline';
+
+  const machines = useMemo(
+    () => (filter === 'All' ? currentMachines : currentMachines.filter(m => m.area === filter)),
+    [currentMachines, filter],
+  );
+
   return (
     <View style={styles.screen}>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
-          <Text style={styles.title}>My Places</Text>
-          <TouchableOpacity style={styles.addBtn}>
-            <Ionicons name="add" size={22} color={Colors.green} />
-          </TouchableOpacity>
+          <Text style={styles.title}>My places</Text>
         </View>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+          {/* Current place selector */}
           <View style={styles.section}>
-            <View style={styles.gymCard}>
-              <View style={styles.gymIcon}>
-                <Ionicons name="business-outline" size={26} color={Colors.green} />
-              </View>
+            <TouchableOpacity style={styles.placeCard} activeOpacity={0.85} onPress={() => setPickerOpen(true)} accessibilityRole="button" accessibilityLabel="Switch or manage places">
+              <View style={styles.placeIcon}><Ionicons name={placeIcon} size={22} color={Colors.greenDeep} /></View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.gymName}>My Gym</Text>
-                <Text style={styles.gymSub}>12 machines saved</Text>
+                <Text style={styles.placeName} numberOfLines={1}>{current?.name ?? 'My Gym'}</Text>
+                <Text style={styles.placeMeta}>
+                  {currentMachines.length} machine{currentMachines.length === 1 ? '' : 's'}
+                  {confidentCount > 0 ? ` · ${confidentCount} confident` : ''}
+                </Text>
               </View>
-              <TouchableOpacity style={styles.buildBtn}>
-                <Text style={styles.buildBtnText}>Build workout</Text>
-              </TouchableOpacity>
-            </View>
+              <View style={styles.switchPill}>
+                <Ionicons name="swap-horizontal" size={15} color={Colors.greenDeep} />
+                <Text style={styles.switchPillText}>Switch</Text>
+              </View>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.section}>
-            <View style={styles.sectionRow}>
-              <Text style={styles.sectionTitle}>Machines</Text>
-              <TouchableOpacity style={styles.addMachineBtn}>
-                <Ionicons name="add" size={16} color={Colors.greenDeep} />
-                <Text style={styles.addMachineText}>Add</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.emptyCard}>
-              <Ionicons name="scan-outline" size={36} color={Colors.separator} />
-              <Text style={styles.emptyText}>No machines yet</Text>
-              <Text style={styles.emptySub}>Scan a machine to add it to your gym.</Text>
-            </View>
+            <TouchableOpacity style={styles.addBtn} activeOpacity={0.9} onPress={() => router.push('/add-machine')}>
+              <Ionicons name="add" size={22} color="#fff" />
+              <View>
+                <Text style={styles.addBtnText}>Add a machine</Text>
+                <Text style={styles.addBtnSub}>Scan · search · by hand</Text>
+              </View>
+            </TouchableOpacity>
           </View>
+
+          {currentMachines.length > 0 && (
+            <View style={styles.filterRow}>
+              {visibleFilters.map(f => {
+                const on = filter === f;
+                return (
+                  <TouchableOpacity key={f} style={[styles.filterChip, on && styles.filterChipActive]} onPress={() => setFilter(f)}>
+                    <Text style={[styles.filterText, on && styles.filterTextActive]}>{f}</Text>
+                    <Text style={[styles.filterCount, on && styles.filterCountActive]}>{counts[f]}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          {loading && machines.length === 0 ? (
+            <View style={styles.grid}>
+              {[0, 1, 2, 3].map(i => (
+                <View key={i} style={styles.cardWrap}>
+                  <View style={styles.card}>
+                    <Skeleton style={styles.cardImage} />
+                    <Skeleton style={[styles.skeletonLine, { width: '70%' }]} />
+                    <Skeleton style={[styles.skeletonLine, { width: '45%' }]} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : machines.length === 0 ? (
+            <View style={styles.empty}>
+              <Ionicons name="scan-outline" size={40} color={Colors.labelTertiary} />
+              <Text style={styles.emptyTitle}>No machines here yet</Text>
+              <Text style={styles.emptySub}>Tap “Add a machine” to scan, search, or add one by hand.</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.gridHint}>Swipe or long-press a machine to remove it</Text>
+              <View style={styles.grid}>
+              {machines.map(m => {
+                const trained = trainedAgo(m.lastTrainedAt);
+                return (
+                  <SwipeableRow key={m.id} containerStyle={styles.cardWrap} style={styles.card} onDelete={() => confirmRemove(m)}>
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() => router.push({ pathname: '/machine/[id]', params: { id: m.id } })}
+                      onLongPress={() => confirmRemove(m)}
+                    >
+                      <View style={styles.cardImage}>
+                        {m.photoUri
+                          ? <Image source={{ uri: m.photoUri }} style={styles.cardPhoto} resizeMode="cover" />
+                          : <Ionicons name={iconForKey(m.key)} size={34} color={Colors.green} />}
+                      </View>
+                      <Text style={styles.cardName} numberOfLines={1}>{m.name}</Text>
+                      {trained ? (
+                        <View style={styles.cardMetaRow}>
+                          <Ionicons name="time-outline" size={11} color={Colors.labelSecondary} />
+                          <Text style={[styles.cardCat, { marginTop: 0, flex: 1 }]} numberOfLines={1}>Trained {trained}</Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.cardCat} numberOfLines={1}>{m.cat}</Text>
+                      )}
+                      <View style={styles.cardStatus}>
+                        <View style={[styles.dot, { backgroundColor: m.status === 'Comfortable' ? Colors.green : m.status === 'Scanned' ? Colors.sky : Colors.amber }]} />
+                        <Text style={styles.cardStatusText}>{m.status}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </SwipeableRow>
+                );
+              })}
+              </View>
+            </>
+          )}
         </ScrollView>
+
+        {currentMachines.length > 0 && (
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.buildBtn} onPress={() => router.push('/workout/builder')}>
+              <Ionicons name="barbell" size={18} color="#fff" />
+              <Text style={styles.buildBtnText}>Build workout from this place</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </SafeAreaView>
+
+      <PlacePickerSheet visible={pickerOpen} onClose={() => setPickerOpen(false)} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F4F6F0' },
-  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  screen: { flex: 1, backgroundColor: Colors.cloud },
+  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
   title: { fontSize: 34, fontWeight: '700', letterSpacing: 0.4, color: Colors.labelPrimary },
-  addBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
-  section: { paddingHorizontal: 20, marginBottom: 24 },
-  gymCard: { backgroundColor: '#fff', borderRadius: 20, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
-  gymIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
-  gymName: { fontSize: 17, fontWeight: '700', color: Colors.labelPrimary },
-  gymSub: { fontSize: 13, color: Colors.labelSecondary, marginTop: 2 },
-  buildBtn: { backgroundColor: Colors.mist, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
-  buildBtnText: { fontSize: 13, fontWeight: '600', color: Colors.greenDeep },
-  sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 19, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.3 },
-  addMachineBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  addMachineText: { fontSize: 14, fontWeight: '600', color: Colors.greenDeep },
-  emptyCard: { backgroundColor: '#fff', borderRadius: 20, padding: 32, alignItems: 'center', gap: 8 },
-  emptyText: { fontSize: 17, fontWeight: '600', color: Colors.labelSecondary },
-  emptySub: { fontSize: 13, color: Colors.labelTertiary, textAlign: 'center' },
+  section: { paddingHorizontal: 20, marginBottom: 16 },
+  placeCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 16, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+  placeIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
+  placeName: { fontSize: 17, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.3 },
+  placeMeta: { fontSize: 13, color: Colors.labelSecondary, marginTop: 2 },
+  switchPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, height: 32, borderRadius: 100, backgroundColor: Colors.mist },
+  switchPillText: { fontSize: 13, fontWeight: '600', color: Colors.greenDeep },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Colors.green, borderRadius: 18, padding: 18, shadowColor: '#082816', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.18, shadowRadius: 18 },
+  addBtnText: { fontSize: 17, fontWeight: '700', color: '#fff' },
+  addBtnSub: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 1 },
+  filterRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginBottom: 16 },
+  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 100, backgroundColor: '#fff', borderWidth: 1, borderColor: Colors.separator },
+  filterChipActive: { backgroundColor: Colors.ink, borderColor: Colors.ink },
+  filterText: { fontSize: 14, fontWeight: '600', color: Colors.labelSecondary },
+  filterTextActive: { color: '#fff' },
+  filterCount: { fontSize: 12, fontWeight: '700', color: Colors.labelTertiary, minWidth: 14, textAlign: 'center' },
+  filterCountActive: { color: 'rgba(255,255,255,0.7)' },
+  gridHint: { fontSize: 12, color: Colors.labelTertiary, paddingHorizontal: 20, marginBottom: 10 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: 20 },
+  cardWrap: { width: '47%', flexGrow: 1, maxWidth: '48.5%' },
+  card: { backgroundColor: '#fff', borderRadius: 18, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+  cardImage: { height: 80, borderRadius: 12, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center', marginBottom: 10, overflow: 'hidden' },
+  cardPhoto: { width: '100%', height: '100%' },
+  skeletonLine: { height: 11, borderRadius: 6, marginTop: 7 },
+  cardName: { fontSize: 15, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.2 },
+  cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
+  cardCat: { fontSize: 12, color: Colors.labelSecondary, marginTop: 2 },
+  cardStatus: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
+  dot: { width: 7, height: 7, borderRadius: 4 },
+  cardStatusText: { fontSize: 11, fontWeight: '500', color: Colors.labelSecondary },
+  empty: { alignItems: 'center', paddingVertical: 50, paddingHorizontal: 40, gap: 8 },
+  emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.labelPrimary, marginTop: 8 },
+  emptySub: { fontSize: 14, color: Colors.labelSecondary, textAlign: 'center', lineHeight: 20 },
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingBottom: 30, backgroundColor: 'rgba(244,246,240,0.95)', borderTopWidth: 0.5, borderTopColor: Colors.separator },
+  buildBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 54, borderRadius: 16, backgroundColor: Colors.ink },
+  buildBtnText: { fontSize: 16, fontWeight: '600', color: '#fff' },
 });

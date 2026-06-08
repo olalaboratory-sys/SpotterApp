@@ -1,26 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
-  View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, Dimensions, ActivityIndicator,
+  View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { Colors } from '../../constants/colors';
+import { iconForKey } from '../../constants/machineIcon';
+import { allMachines } from '../../constants/machines';
+import { workoutStreak } from '../../lib/streak';
+import { useCountUp } from '../../lib/useCountUp';
+import Skeleton from '../../components/Skeleton';
+import PressableScale from '../../components/PressableScale';
+
+const CATALOG_COUNT = allMachines().length;
 import { useAuth } from '../../context/AuthContext';
-import { db } from '../../lib/firebase';
+import { usePlaces } from '../../context/PlacesContext';
+import { useWorkouts } from '../../context/WorkoutsContext';
 
 const { width } = Dimensions.get('window');
-
-type SavedMachine = {
-  id: string;
-  name: string;
-  muscle: string;
-  status: string;
-  dotColor: string;
-  machineKey: string;
-};
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -28,6 +26,7 @@ function getGreeting() {
   if (h < 17) return 'Good afternoon';
   return 'Good evening';
 }
+
 
 function SectionHead({ title, action, onAction }: { title: string; action?: string; onAction?: () => void }) {
   return (
@@ -38,44 +37,32 @@ function SectionHead({ title, action, onAction }: { title: string; action?: stri
   );
 }
 
-function EmptyMachines({ onAdd }: { onAdd: () => void }) {
-  return (
-    <View style={styles.emptyWrap}>
-      <Ionicons name="barbell-outline" size={40} color={Colors.labelTertiary} />
-      <Text style={styles.emptyTitle}>No machines saved yet</Text>
-      <Text style={styles.emptySub}>Scan a machine or add one manually to get started.</Text>
-      <TouchableOpacity style={styles.emptyBtn} onPress={onAdd}>
-        <Text style={styles.emptyBtnText}>Add your first machine</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 export default function HomeScreen() {
   const router = useRouter();
-  const { user, userProfile } = useAuth();
-  const [machines, setMachines] = useState<SavedMachine[]>([]);
-  const [machinesLoading, setMachinesLoading] = useState(true);
+  const { userProfile } = useAuth();
+  const { current, currentMachines, recent, saved, loading } = usePlaces();
+  const { history, startDraft } = useWorkouts();
 
   const firstName = userProfile?.displayName?.split(' ')[0] ?? 'there';
+  const streak = useMemo(() => workoutStreak(history.map(w => w.createdAt)), [history]);
 
-  useEffect(() => {
-    if (!user) return;
-    const q = query(
-      collection(db, 'users', user.uid, 'machines'),
-      orderBy('savedAt', 'desc'),
-      limit(10),
-    );
-    const unsub = onSnapshot(q, snap => {
-      setMachines(snap.docs.map(d => ({ id: d.id, ...d.data() } as SavedMachine)));
-      setMachinesLoading(false);
-    }, () => setMachinesLoading(false));
-    return unsub;
-  }, [user]);
+  const savedCount = useCountUp(saved.length);
+  const workoutCount = useCountUp(history.length);
+  const confidentCount = useCountUp(saved.filter(s => s.status === 'Comfortable').length);
+
+  const lastWorkout = history[0];
+  const repeatLast = () => {
+    if (!lastWorkout?.exerciseKeys?.length) return;
+    startDraft(lastWorkout.exerciseKeys, {
+      goal: lastWorkout.title, time: '30 min', difficulty: 'Beginner',
+      placeId: current?.id ?? null, placeName: current?.name ?? '', title: lastWorkout.title,
+    });
+    router.push('/workout/preview');
+  };
 
   const QUICK = [
-    { icon: 'list-outline' as const, title: 'Beginner workout', sub: 'Build in 1 tap' },
-    { icon: 'business-outline' as const, title: 'My Gym', sub: `${userProfile?.machinesCount ?? 0} machines` },
+    { icon: 'list-outline' as const, title: 'Beginner workout', sub: 'Build in 1 tap', onPress: () => router.push('/workout/builder') },
+    { icon: 'business-outline' as const, title: current?.name ?? 'My place', sub: `${currentMachines.length} machines`, onPress: () => router.push('/(tabs)/my-gym') },
   ];
 
   return (
@@ -87,32 +74,23 @@ export default function HomeScreen() {
             <Text style={styles.tagline}>Ready to learn a machine?</Text>
           </View>
           <View style={styles.streak}>
-            <Ionicons name="flame" size={16} color={Colors.amber} />
-            <Text style={styles.streakNum}>{userProfile?.machinesCount ?? 0}</Text>
+            <Ionicons name="flame" size={16} color={streak > 0 ? Colors.amber : Colors.labelTertiary} />
+            <Text style={[styles.streakNum, streak === 0 && { color: Colors.labelTertiary }]}>{streak}</Text>
           </View>
         </View>
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
           <View style={styles.heroWrap}>
-            <TouchableOpacity style={styles.hero} onPress={() => router.push('/(tabs)/scan')} activeOpacity={0.9}>
-              <LinearGradient
-                colors={[Colors.ink2, Colors.ink]}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-              />
-              <View style={styles.heroCornerGraphic}>
-                <Ionicons name="scan-outline" size={28} color={Colors.lime} />
-              </View>
+            <PressableScale style={styles.hero} scaleTo={0.98} onPress={() => router.push('/(tabs)/scan')} accessibilityRole="button" accessibilityLabel="Scan a machine">
+              <LinearGradient colors={[Colors.ink2, Colors.ink]} style={StyleSheet.absoluteFill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
+              <View style={styles.heroCornerGraphic}><Ionicons name="scan-outline" size={28} color={Colors.lime} /></View>
               <View style={styles.heroContent}>
-                <View style={styles.heroIconBox}>
-                  <Ionicons name="scan-outline" size={28} color={Colors.ink} />
-                </View>
+                <View style={styles.heroIconBox}><Ionicons name="scan-outline" size={28} color={Colors.ink} /></View>
                 <Text style={styles.heroEyebrow}>Start here</Text>
                 <Text style={styles.heroTitle}>Scan a machine</Text>
                 <Text style={styles.heroBody}>Point your camera at any machine to get a beginner guide in seconds.</Text>
               </View>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
 
           <View style={styles.section}>
@@ -125,64 +103,109 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <View style={styles.quickGrid}>
               {QUICK.map(q => (
-                <TouchableOpacity key={q.title} style={styles.quickCard} activeOpacity={0.8}>
-                  <View style={styles.quickIcon}>
-                    <Ionicons name={q.icon} size={20} color={Colors.greenDeep} />
-                  </View>
-                  <Text style={styles.quickTitle}>{q.title}</Text>
+                <PressableScale key={q.title} containerStyle={{ flex: 1 }} style={styles.quickCard} onPress={q.onPress}>
+                  <View style={styles.quickIcon}><Ionicons name={q.icon} size={20} color={Colors.greenDeep} /></View>
+                  <Text style={styles.quickTitle} numberOfLines={1}>{q.title}</Text>
                   <Text style={styles.quickSub}>{q.sub}</Text>
-                </TouchableOpacity>
+                </PressableScale>
               ))}
             </View>
           </View>
 
+          {lastWorkout?.exerciseKeys?.length ? (
+            <View style={styles.section}>
+              <PressableScale style={styles.resumeCard} scaleTo={0.98} onPress={repeatLast}>
+                <View style={styles.resumeIcon}><Ionicons name="refresh" size={22} color={Colors.lime} /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.resumeEyebrow}>JUMP BACK IN</Text>
+                  <Text style={styles.resumeTitle} numberOfLines={1}>{lastWorkout.title}</Text>
+                  <Text style={styles.resumeSub}>{lastWorkout.completedCount}/{lastWorkout.totalCount} exercises last time</Text>
+                </View>
+                <View style={styles.resumeBtn}><Text style={styles.resumeBtnText}>Repeat</Text></View>
+              </PressableScale>
+            </View>
+          ) : null}
+
           <View style={[styles.section, { paddingHorizontal: 0 }]}>
             <View style={{ paddingHorizontal: 20, marginBottom: 8 }}>
-              <SectionHead title="Recently scanned" />
+              <SectionHead title="Recently scanned" action={recent.length ? 'See all' : undefined} onAction={() => router.push('/library')} />
             </View>
-            {machinesLoading ? (
-              <ActivityIndicator color={Colors.green} style={{ marginVertical: 20 }} />
-            ) : machines.length === 0 ? (
-              <EmptyMachines onAdd={() => router.push('/add-machine')} />
+            {loading && recent.length === 0 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}>
+                {[0, 1, 2].map(i => (
+                  <View key={i} style={styles.recentCard}>
+                    <Skeleton style={styles.recentImagePlaceholder} />
+                    <View style={styles.recentInfo}>
+                      <Skeleton style={[styles.skeletonLine, { width: '80%' }]} />
+                      <Skeleton style={[styles.skeletonLine, { width: '55%' }]} />
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : recent.length === 0 ? (
+              <View style={styles.emptyWrap}>
+                <Ionicons name="barbell-outline" size={40} color={Colors.labelTertiary} />
+                <Text style={styles.emptyTitle}>No machines saved yet</Text>
+                <Text style={styles.emptySub}>Scan a machine or add one manually to get started.</Text>
+                <TouchableOpacity style={styles.emptyBtn} onPress={() => router.push('/add-machine')}>
+                  <Text style={styles.emptyBtnText}>Add your first machine</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 12, paddingBottom: 4 }}>
-                {machines.map(m => (
-                  <TouchableOpacity
-                    key={m.id}
-                    style={styles.recentCard}
-                    onPress={() => router.push({ pathname: '/guide/[key]', params: { key: m.machineKey } })}
-                    activeOpacity={0.85}
-                  >
+                {recent.map(m => (
+                  <PressableScale key={m.id} style={styles.recentCard} onPress={() => router.push({ pathname: '/guide/[key]', params: { key: m.key } })}>
                     <View style={styles.recentImagePlaceholder}>
-                      <Ionicons name="barbell-outline" size={36} color={Colors.green} />
+                      {m.photoUri
+                        ? <Image source={{ uri: m.photoUri }} style={styles.recentPhoto} resizeMode="cover" />
+                        : <Ionicons name={iconForKey(m.key)} size={36} color={Colors.green} />}
                     </View>
                     <View style={styles.recentInfo}>
-                      <Text style={styles.recentName}>{m.name}</Text>
-                      <Text style={styles.recentMuscle}>{m.muscle}</Text>
+                      <Text style={styles.recentName} numberOfLines={1}>{m.name}</Text>
+                      <Text style={styles.recentMuscle} numberOfLines={1}>{m.cat}</Text>
                       <View style={styles.recentStatus}>
-                        <View style={[styles.recentDot, { backgroundColor: m.dotColor }]} />
+                        <View style={[styles.recentDot, { backgroundColor: m.status === 'Comfortable' ? Colors.green : m.status === 'Scanned' ? Colors.sky : Colors.amber }]} />
                         <Text style={styles.recentStatusText}>{m.status}</Text>
                       </View>
                     </View>
-                  </TouchableOpacity>
+                  </PressableScale>
                 ))}
               </ScrollView>
             )}
           </View>
 
           <View style={styles.section}>
-            <SectionHead title="Your progress" />
+            <TouchableOpacity style={styles.browseRow} activeOpacity={0.85} onPress={() => router.push('/library')}>
+              <View style={styles.browseIcon}><Ionicons name="library-outline" size={20} color={Colors.greenDeep} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.browseTitle}>Browse the machine library</Text>
+                <Text style={styles.browseSub}>{CATALOG_COUNT} machines · by body area</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.labelTertiary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.browseRow, { marginTop: 10 }]} activeOpacity={0.85} onPress={() => router.push('/routines')}>
+              <View style={styles.browseIcon}><Ionicons name="list-outline" size={20} color={Colors.greenDeep} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.browseTitle}>Browse workout routines</Text>
+                <Text style={styles.browseSub}>Find & save ready-made routines</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.labelTertiary} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <SectionHead title="Your progress" action="Details" onAction={() => router.push('/progress')} />
             <View style={styles.progressGrid}>
               {[
-                { n: String(userProfile?.machinesCount ?? 0), label: 'machines\nlearned', icon: 'locate-outline' as const },
-                { n: String(userProfile?.workoutsCount ?? 0), label: 'workouts\ndone', icon: 'barbell-outline' as const },
-                { n: userProfile?.subscriptionStatus === 'trial' ? 'Trial' : 'Free', label: 'gym\nconfidence', icon: 'shield-outline' as const },
+                { n: savedCount, label: 'machines\nsaved', icon: 'locate-outline' as const },
+                { n: workoutCount, label: 'workouts\ndone', icon: 'barbell-outline' as const },
+                { n: confidentCount, label: 'confident\nwith', icon: 'shield-checkmark-outline' as const },
               ].map(p => (
-                <View key={p.label} style={styles.progressCard}>
+                <PressableScale key={p.label} containerStyle={{ flex: 1 }} style={styles.progressCard} onPress={() => router.push('/progress')}>
                   <Ionicons name={p.icon} size={19} color={Colors.green} />
                   <Text style={styles.progressNum}>{p.n}</Text>
                   <Text style={styles.progressLabel}>{p.label}</Text>
-                </View>
+                </PressableScale>
               ))}
             </View>
           </View>
@@ -215,6 +238,13 @@ const styles = StyleSheet.create({
   addManual: { height: 46, borderRadius: 14, borderWidth: 1.5, borderColor: Colors.separator, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   addManualText: { fontSize: 15, fontWeight: '600', color: Colors.labelPrimary },
   quickGrid: { flexDirection: 'row', gap: 12 },
+  resumeCard: { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: Colors.ink, borderRadius: 18, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12 },
+  resumeIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(201,251,78,0.14)', alignItems: 'center', justifyContent: 'center' },
+  resumeEyebrow: { fontSize: 11, fontWeight: '700', letterSpacing: 1.4, color: Colors.lime },
+  resumeTitle: { fontSize: 16, fontWeight: '700', color: '#fff', marginTop: 3, letterSpacing: -0.2 },
+  resumeSub: { fontSize: 12, color: 'rgba(231,236,245,0.6)', marginTop: 2 },
+  resumeBtn: { paddingHorizontal: 16, height: 38, borderRadius: 100, backgroundColor: Colors.lime, alignItems: 'center', justifyContent: 'center' },
+  resumeBtnText: { fontSize: 14, fontWeight: '700', color: Colors.ink },
   quickCard: { flex: 1, backgroundColor: '#fff', borderRadius: 18, padding: 15, gap: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
   quickIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
   quickTitle: { fontSize: 15, fontWeight: '600', color: Colors.labelPrimary, letterSpacing: -0.2 },
@@ -225,13 +255,19 @@ const styles = StyleSheet.create({
   emptyBtn: { marginTop: 12, height: 42, paddingHorizontal: 20, borderRadius: 12, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: Colors.green },
   emptyBtnText: { fontSize: 14, fontWeight: '600', color: Colors.greenDeep },
   recentCard: { width: 150, backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
-  recentImagePlaceholder: { height: 88, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
+  recentImagePlaceholder: { height: 88, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  recentPhoto: { width: '100%', height: '100%' },
+  skeletonLine: { height: 11, borderRadius: 6, marginTop: 4 },
   recentInfo: { padding: 10, gap: 3 },
   recentName: { fontSize: 14, fontWeight: '600', color: Colors.labelPrimary, letterSpacing: -0.2 },
   recentMuscle: { fontSize: 12, color: Colors.labelSecondary },
   recentStatus: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
   recentDot: { width: 6, height: 6, borderRadius: 3 },
   recentStatusText: { fontSize: 11, color: Colors.labelSecondary, fontWeight: '500' },
+  browseRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 16, padding: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4 },
+  browseIcon: { width: 40, height: 40, borderRadius: 11, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center' },
+  browseTitle: { fontSize: 15, fontWeight: '600', color: Colors.labelPrimary, letterSpacing: -0.2 },
+  browseSub: { fontSize: 12, color: Colors.labelSecondary, marginTop: 2 },
   progressGrid: { flexDirection: 'row', gap: 12 },
   progressCard: { flex: 1, backgroundColor: '#fff', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 15, gap: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
   progressNum: { fontSize: 22, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.5 },

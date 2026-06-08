@@ -2,6 +2,9 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { PlacesProvider } from '../context/PlacesContext';
+import { WorkoutsProvider } from '../context/WorkoutsContext';
+import { ToastProvider } from '../context/ToastContext';
 
 function RootNavigator() {
   const { user, userProfile, loading } = useAuth();
@@ -19,13 +22,13 @@ function RootNavigator() {
     const onPaywall = group === 'paywall';
 
     if (!user) {
-      if (!inAuth) router.replace('/(auth)/login');
+      if (!inAuth) router.replace('/(auth)/welcome');
       return;
     }
 
     if (!userProfile?.onboardingCompleted) {
       // Allow the onboarding flow and the paywall (which completes onboarding).
-      if (!inOnboarding && !onPaywall) router.replace('/(onboarding)/welcome');
+      if (!inOnboarding && !onPaywall) router.replace('/(onboarding)/experience');
       return;
     }
 
@@ -36,23 +39,40 @@ function RootNavigator() {
   }, [user, userProfile, loading, segments, router]);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
+    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right', gestureEnabled: true }}>
+      <Stack.Screen name="index" options={{ animation: 'fade' }} />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(onboarding)" />
-      <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="paywall" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
       <Stack.Screen name="guide/[key]" />
-      <Stack.Screen name="add-machine" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="add-machine" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="library/index" />
+      <Stack.Screen name="library/[category]" />
+      <Stack.Screen name="routines/index" />
+      <Stack.Screen name="machine/[id]" />
+      <Stack.Screen name="workout/builder" />
+      <Stack.Screen name="workout/preview" />
+      <Stack.Screen name="workout/session" />
+      <Stack.Screen name="workout/complete" />
+      <Stack.Screen name="progress" />
+      <Stack.Screen name="settings" />
+      <Stack.Screen name="legal/[doc]" />
     </Stack>
   );
 }
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <StatusBar style="light" />
-      <RootNavigator />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <PlacesProvider>
+          <WorkoutsProvider>
+            <StatusBar style="light" />
+            <RootNavigator />
+          </WorkoutsProvider>
+        </PlacesProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 }

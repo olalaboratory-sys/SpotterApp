@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  SafeAreaView, Dimensions,
+  SafeAreaView, Dimensions, Image, Animated,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { MACHINES } from '../../constants/machines';
+import { getMachine, findKeyByName } from '../../constants/machines';
+import { iconForKey } from '../../constants/machineIcon';
+import * as haptics from '../../lib/haptics';
+import { usePlaces } from '../../context/PlacesContext';
+import { useWorkouts } from '../../context/WorkoutsContext';
+import MuscleMap from '../../components/MuscleMap';
 
 const TABS = ['Setup', 'Movement', 'Mistakes', 'Alternatives'];
 
@@ -47,12 +53,12 @@ function MistakeCard({ t, w, f }: { t: string; w: string; f: string }) {
   );
 }
 
-function AltCard({ n, muscle, tag, onPress }: { n: string; muscle: string; tag: string; onPress?: () => void }) {
+function AltCard({ n, muscle, tag, icon, onPress }: { n: string; muscle: string; tag: string; icon: keyof typeof Ionicons.glyphMap; onPress?: () => void }) {
   const tagColor = tag === 'Easier' ? Colors.mist : tag === 'No machine' ? '#f2f2f7' : Colors.lime;
   const tagTextColor = tag === 'No machine' ? Colors.labelSecondary : tag === 'Easier' ? Colors.greenDeep : '#0a1f12';
   return (
-    <TouchableOpacity style={styles.altCard} onPress={onPress} activeOpacity={0.8}>
-      <View style={styles.altIcon}><Ionicons name="barbell-outline" size={20} color={Colors.greenDeep} /></View>
+    <TouchableOpacity style={styles.altCard} onPress={onPress} activeOpacity={onPress ? 0.7 : 1} disabled={!onPress}>
+      <View style={styles.altIcon}><Ionicons name={icon} size={20} color={Colors.greenDeep} /></View>
       <View style={{ flex: 1 }}>
         <Text style={styles.altName}>{n}</Text>
         <Text style={styles.altMuscle}>{muscle}</Text>
@@ -60,6 +66,7 @@ function AltCard({ n, muscle, tag, onPress }: { n: string; muscle: string; tag: 
       <View style={[styles.altTag, { backgroundColor: tagColor }]}>
         <Text style={[styles.altTagText, { color: tagTextColor }]}>{tag}</Text>
       </View>
+      {onPress && <Ionicons name="chevron-forward" size={16} color={Colors.labelTertiary} style={{ marginLeft: 4 }} />}
     </TouchableOpacity>
   );
 }
@@ -68,9 +75,49 @@ export default function GuideScreen() {
   const router = useRouter();
   const { key } = useLocalSearchParams<{ key: string }>();
   const [tab, setTab] = useState(0);
-  const [saved, setSaved] = useState(false);
+  const { current, isSaved, toggle, saveTo, setPhoto, photoFor } = usePlaces();
+  const { startDraft } = useWorkouts();
 
-  const machine = MACHINES[key ?? 'lat'] ?? MACHINES['lat'];
+  const machineKey = key ?? 'lat';
+  const machine = getMachine(machineKey);
+  const saved = current ? isSaved(machineKey, current.id) : false;
+
+  const [localPhoto, setLocalPhoto] = useState<string | null>(null);
+  const photo = localPhoto ?? (current ? photoFor(machineKey, current.id) : null);
+
+  // Cross-fade the tab content when switching tabs.
+  const tabFade = useRef(new Animated.Value(1)).current;
+  const changeTab = (i: number) => {
+    if (i === tab) return;
+    setTab(i);
+    tabFade.setValue(0);
+    Animated.timing(tabFade, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+  };
+
+  const onToggleSave = () => {
+    haptics.tap();
+    toggle(machineKey, 'Added');
+  };
+
+  const dropPhoto = async () => {
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+    if (res.canceled || !res.assets[0]) return;
+    const uri = res.assets[0].uri;
+    setLocalPhoto(uri);
+    if (current) {
+      // Make sure it's saved, then attach the photo to the saved copy.
+      if (!isSaved(machineKey, current.id)) await saveTo(current.id, machineKey, 'Added');
+      await setPhoto(machineKey, uri, current.id);
+    }
+  };
+
+  const addToWorkout = () => {
+    startDraft([machineKey], {
+      goal: machine.name, time: '15 min', difficulty: 'Beginner',
+      placeId: current?.id ?? null, placeName: current?.name ?? '', title: `${machine.name} workout`,
+    });
+    router.push('/workout/preview');
+  };
 
   return (
     <View style={styles.screen}>
@@ -80,24 +127,34 @@ export default function GuideScreen() {
           <LinearGradient colors={[Colors.ink2, Colors.ink]} style={StyleSheet.absoluteFill} />
           <SafeAreaView>
             <View style={styles.heroNav}>
-              <TouchableOpacity style={styles.heroBackBtn} onPress={() => router.back()}>
+              <TouchableOpacity style={styles.heroBackBtn} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Go back">
                 <Ionicons name="chevron-back" size={20} color="#fff" />
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.heroBackBtn, saved && { backgroundColor: Colors.green }]} onPress={() => setSaved(s => !s)}>
+              <TouchableOpacity style={[styles.heroBackBtn, saved && { backgroundColor: Colors.green }]} onPress={onToggleSave} accessibilityRole="button" accessibilityLabel={saved ? 'Remove from saved machines' : 'Save this machine'}>
                 <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={18} color="#fff" />
               </TouchableOpacity>
             </View>
           </SafeAreaView>
 
-          <View style={styles.heroImage}>
-            <Ionicons name="barbell-outline" size={80} color={Colors.lime} />
-          </View>
+          <TouchableOpacity style={styles.heroImage} activeOpacity={0.85} onPress={dropPhoto}>
+            {photo ? (
+              <Image source={{ uri: photo }} style={styles.heroPhoto} resizeMode="cover" />
+            ) : (
+              <>
+                <Ionicons name={iconForKey(machineKey)} size={80} color={Colors.lime} />
+                <View style={styles.dropHint}>
+                  <Ionicons name="camera-outline" size={14} color="rgba(255,255,255,0.8)" />
+                  <Text style={styles.dropHintText}>Drop a photo</Text>
+                </View>
+              </>
+            )}
+          </TouchableOpacity>
 
           <View style={styles.heroText}>
             <Text style={styles.heroName}>{machine.name}</Text>
             <View style={styles.heroChips}>
               <View style={styles.chip}><Text style={styles.chipText}>Beginner-friendly</Text></View>
-              <View style={[styles.chip, styles.chipDark]}><Text style={[styles.chipText, { color: 'rgba(223,247,231,0.85)' }]}>{machine.muscle}</Text></View>
+              <View style={[styles.chip, styles.chipDark]}><Text style={[styles.chipText, { color: 'rgba(223,247,231,0.85)' }]}>{machine.cat}</Text></View>
             </View>
           </View>
         </View>
@@ -110,7 +167,7 @@ export default function GuideScreen() {
           <View style={styles.muscleSection}>
             <LinearGradient colors={[Colors.ink2, Colors.ink]} style={[StyleSheet.absoluteFill, { borderRadius: 20 }]} />
             <View style={styles.musclePlaceholder}>
-              <Ionicons name="body-outline" size={80} color="rgba(201,251,78,0.6)" />
+              <MuscleMap map={machine.map} />
             </View>
             <View style={styles.muscleList}>
               <Text style={styles.muscleEyebrow}>What you're training</Text>
@@ -136,7 +193,7 @@ export default function GuideScreen() {
                   <View style={styles.quickItemIcon}>
                     <Ionicons name="information-circle-outline" size={18} color="#5a7a05" />
                   </View>
-                  <View>
+                  <View style={{ flex: 1 }}>
                     <Text style={styles.quickItemKey}>{q.k}</Text>
                     <Text style={styles.quickItemVal}>{q.v}</Text>
                   </View>
@@ -151,7 +208,7 @@ export default function GuideScreen() {
               <TouchableOpacity
                 key={t}
                 style={[styles.tabItem, tab === i && styles.tabItemActive]}
-                onPress={() => setTab(i)}
+                onPress={() => changeTab(i)}
               >
                 <Text style={[styles.tabLabel, tab === i && styles.tabLabelActive]}>{t}</Text>
               </TouchableOpacity>
@@ -159,7 +216,7 @@ export default function GuideScreen() {
           </ScrollView>
 
           {/* Tab content */}
-          <View style={styles.tabContent}>
+          <Animated.View style={[styles.tabContent, { opacity: tabFade }]}>
             {tab === 0 && <StepList steps={machine.setup} />}
             {tab === 1 && <StepList steps={machine.movement} />}
             {tab === 2 && (
@@ -173,27 +230,37 @@ export default function GuideScreen() {
                   <Ionicons name="swap-horizontal-outline" size={17} color={Colors.greenDeep} />
                   <Text style={styles.altNoteText}>Machine taken? These train the same muscles.</Text>
                 </View>
-                {machine.alternatives.map((a, i) => <AltCard key={i} {...a} />)}
+                {machine.alts.map((a, i) => {
+                  const altKey = findKeyByName(a.n);
+                  return (
+                    <AltCard
+                      key={i}
+                      {...a}
+                      icon={altKey ? iconForKey(altKey) : 'barbell-outline'}
+                      onPress={altKey ? () => router.push({ pathname: '/guide/[key]', params: { key: altKey } }) : undefined}
+                    />
+                  );
+                })}
               </View>
             )}
-          </View>
+          </Animated.View>
 
           {/* Safety note */}
           <View style={styles.safetyNote}>
             <Ionicons name="shield-checkmark-outline" size={18} color={Colors.greenDeep} style={{ flexShrink: 0, marginTop: 1 }} />
-            <Text style={styles.safetyText}>{machine.safetyNotes}</Text>
+            <Text style={styles.safetyText}>Move slowly and keep breathing — don't hold your breath. Stop if you feel sharp pain, dizziness, or chest pressure. New to exercise, pregnant or postpartum, or managing a heart, blood-pressure, or back condition? Check with your doctor first. Good form beats heavy weight every time.</Text>
           </View>
         </View>
       </ScrollView>
 
       {/* Bottom CTAs */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.btnPrimary} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.btnPrimary} activeOpacity={0.85} onPress={addToWorkout}>
           <Ionicons name="add-circle-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
           <Text style={styles.btnPrimaryText}>Add to Workout</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.btnSecondary} activeOpacity={0.85}>
-          <Text style={styles.btnSecondaryText}>Save to My Gym</Text>
+        <TouchableOpacity style={styles.btnSecondary} activeOpacity={0.85} onPress={onToggleSave}>
+          <Text style={styles.btnSecondaryText}>{saved ? `Saved to ${current?.name ?? 'My place'}` : 'Save to My Places'}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -206,6 +273,9 @@ const styles = StyleSheet.create({
   heroNav: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8 },
   heroBackBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
   heroImage: { height: 180, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
+  heroPhoto: { width: '100%', height: 180 },
+  dropHint: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 12, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.12)' },
+  dropHintText: { fontSize: 12, fontWeight: '500', color: 'rgba(255,255,255,0.8)' },
   heroText: { paddingHorizontal: 22, gap: 10 },
   heroName: { fontSize: 32, fontWeight: '700', color: '#fff', letterSpacing: -0.7 },
   heroChips: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },

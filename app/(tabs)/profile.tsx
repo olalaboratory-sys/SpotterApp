@@ -4,21 +4,31 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { useAuth, getDaysLeftInTrial } from '../../context/AuthContext';
+import { usePlaces } from '../../context/PlacesContext';
+import { useWorkouts } from '../../context/WorkoutsContext';
+import { workoutStreak } from '../../lib/streak';
+import { useCountUp } from '../../lib/useCountUp';
+import PressableScale from '../../components/PressableScale';
 
-const SETTINGS = [
-  { icon: 'person-outline' as const, label: 'Edit fitness profile', sub: 'Goal · Experience · Preferences' },
-  { icon: 'notifications-outline' as const, label: 'Notifications', sub: 'Reminders · Rest timer alerts' },
-  { icon: 'camera-outline' as const, label: 'Camera & permissions', sub: '' },
-  { icon: 'shield-outline' as const, label: 'Privacy', sub: '' },
-  { icon: 'help-circle-outline' as const, label: 'Help center', sub: 'How scanning works · FAQ' },
+const SETTINGS: { icon: keyof typeof Ionicons.glyphMap; label: string; sub: string; route: string }[] = [
+  { icon: 'stats-chart-outline', label: 'Progress & badges', sub: 'Streak · learned machines', route: '/progress' },
+  { icon: 'person-outline', label: 'Edit fitness profile', sub: 'Goal · Experience · Preferences', route: '/settings' },
+  { icon: 'notifications-outline', label: 'Notifications', sub: 'Reminders · Rest timer alerts', route: '/settings' },
+  { icon: 'shield-outline', label: 'Privacy & legal', sub: 'Disclaimer · Privacy · Terms', route: '/settings' },
+  { icon: 'help-circle-outline', label: 'Help center', sub: 'How scanning works · FAQ', route: '/settings' },
 ];
 
 export default function ProfileTab() {
   const router = useRouter();
   const { userProfile, signOut } = useAuth();
+  const { saved } = usePlaces();
+  const { history } = useWorkouts();
 
   const daysLeft = getDaysLeftInTrial(userProfile?.trialStartedAt ?? null);
   const isTrialActive = userProfile?.subscriptionStatus === 'trial' && daysLeft > 0;
+  const streak = workoutStreak(history.map(w => w.createdAt));
+  const savedCount = useCountUp(saved.length);
+  const workoutCount = useCountUp(history.length);
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -54,7 +64,7 @@ export default function ProfileTab() {
           {/* Trial/subscription card */}
           {isTrialActive ? (
             <View style={styles.section}>
-              <TouchableOpacity style={styles.premiumCard} onPress={() => router.push('/paywall')} activeOpacity={0.9}>
+              <PressableScale style={styles.premiumCard} onPress={() => router.push('/paywall')}>
                 <View style={styles.premiumLeft}>
                   <Text style={styles.premiumLabel}>Premium</Text>
                   <Text style={styles.premiumTitle}>Trial active — {daysLeft} day{daysLeft !== 1 ? 's' : ''} left</Text>
@@ -63,18 +73,18 @@ export default function ProfileTab() {
                 <View style={styles.premiumBadge}>
                   <Ionicons name="flash" size={20} color={Colors.ink} />
                 </View>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           ) : (
             <View style={styles.section}>
-              <TouchableOpacity style={styles.upgradeCard} onPress={() => router.push('/paywall')} activeOpacity={0.9}>
+              <PressableScale style={styles.upgradeCard} onPress={() => router.push('/paywall')}>
                 <Ionicons name="flash-outline" size={20} color={Colors.greenDeep} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.upgradeTitle}>Upgrade to Premium</Text>
                   <Text style={styles.upgradeSub}>Unlock unlimited scans and guides.</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={Colors.labelTertiary} />
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           )}
 
@@ -82,9 +92,9 @@ export default function ProfileTab() {
             <Text style={styles.sectionTitle}>Activity</Text>
             <View style={styles.progressRow}>
               {[
-                { n: String(userProfile?.machinesCount ?? 0), l: 'machines learned' },
-                { n: String(userProfile?.workoutsCount ?? 0), l: 'workouts done' },
-                { n: isTrialActive ? `${daysLeft}d` : '—', l: 'trial left' },
+                { n: String(savedCount), l: 'machines saved' },
+                { n: String(workoutCount), l: 'workouts done' },
+                { n: streak > 0 ? `${streak}d` : '—', l: 'day streak' },
               ].map(p => (
                 <View key={p.l} style={styles.statCard}>
                   <Text style={styles.statNum}>{p.n}</Text>
@@ -98,7 +108,7 @@ export default function ProfileTab() {
             <Text style={styles.sectionTitle}>Settings</Text>
             <View style={styles.settingsList}>
               {SETTINGS.map((s, i) => (
-                <TouchableOpacity key={s.label} style={[styles.settingsRow, i > 0 && styles.settingsRowBorder]} activeOpacity={0.7}>
+                <TouchableOpacity key={s.label} style={[styles.settingsRow, i > 0 && styles.settingsRowBorder]} activeOpacity={0.7} onPress={() => router.push(s.route as any)}>
                   <View style={styles.settingsIcon}>
                     <Ionicons name={s.icon} size={20} color={Colors.green} />
                   </View>
