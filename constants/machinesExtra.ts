@@ -20,9 +20,9 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
       { ic: 'list', k: 'Hold', v: 'Use rails only for balance' },
     ],
     setup: [
-      'Step onto the side rails first, then start the belt slowly.',
-      'Set a comfortable walking speed before stepping on.',
-      'Stand tall, look ahead, let your arms swing naturally.',
+      'Clip the emergency stop cord to your clothing — it stops the belt instantly if you stumble.',
+      'Stand on the side rails, start the belt at the slowest speed, then step on once it’s moving.',
+      'Stand tall, look ahead, and let your arms swing naturally.',
     ],
     movement: [
       'Walk or jog with a relaxed, even stride.',
@@ -216,8 +216,8 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     map: ['quads', 'hamstrings', 'delts', 'core'],
     quick: [
       { ic: 'list', k: 'Effort', v: 'Resistance = how hard you push' },
-      { ic: 'list', k: 'Intervals', v: 'Try 20s hard / 40s easy' },
-      { ic: 'list', k: 'Pace', v: 'Steady for warm-ups' },
+      { ic: 'list', k: 'Start', v: 'Steady, easy pace first' },
+      { ic: 'list', k: 'Later', v: 'Once comfy: 20s hard / 40s easy' },
       { ic: 'list', k: 'Grip', v: 'Push and pull the handles' },
     ],
     setup: [
@@ -284,7 +284,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     quick: [
       { ic: 'list', k: 'Chest', v: 'Pad against your chest' },
       { ic: 'list', k: 'Grip', v: 'Neutral or overhand handles' },
-      { ic: 'list', k: 'Weight', v: 'Start light per side' },
+      { ic: 'list', k: 'Weight', v: 'Light per side — ~12 easy reps' },
       { ic: 'list', k: 'Reps', v: '2–3 sets of 10' },
     ],
     setup: [
@@ -318,7 +318,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     quick: [
       { ic: 'list', k: 'Chest', v: 'Pad against your chest' },
       { ic: 'list', k: 'Grip', v: 'Wide, palms down' },
-      { ic: 'list', k: 'Weight', v: 'Start light' },
+      { ic: 'list', k: 'Weight', v: 'Light — a weight you could lift ~15×' },
       { ic: 'list', k: 'Reps', v: '2–3 sets of 10–12' },
     ],
     setup: [
@@ -351,7 +351,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     quick: [
       { ic: 'list', k: 'Chest', v: 'Pad against your chest' },
       { ic: 'list', k: 'Grip', v: 'Neutral handles' },
-      { ic: 'list', k: 'Weight', v: 'Start light' },
+      { ic: 'list', k: 'Weight', v: 'Light — a weight you could lift ~15×' },
       { ic: 'list', k: 'Reps', v: '2–3 sets of 10' },
     ],
     setup: [
@@ -374,15 +374,15 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
   },
   'shrugmachine': {
     key: 'shrugmachine', name: 'Shrug Machine', cat: 'Machine · Back', area: 'Upper', beginner: true, illo: 'machine',
-    summary: 'A machine for building the traps — the muscles between your neck and shoulders. You simply lift your shoulders straight up against resistance.',
+    summary: 'A machine that works the traps — the muscles between your neck and shoulders. You simply lift your shoulders straight up against resistance.',
     muscles: [
       { n: 'Traps', primary: true },
     ],
-    map: ['traps', 'delts'],
+    map: ['traps'],
     quick: [
       { ic: 'list', k: 'Grip', v: 'Hold handles at your sides' },
       { ic: 'list', k: 'Motion', v: 'Straight up, then down' },
-      { ic: 'list', k: 'Weight', v: 'Start light' },
+      { ic: 'list', k: 'Weight', v: 'Light — a weight you could lift ~15×' },
       { ic: 'list', k: 'Reps', v: '2–3 sets of 12–15' },
     ],
     setup: [
@@ -436,7 +436,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
   },
   'tbarrowstation': {
     key: 'tbarrowstation', name: 'Landmine T-Bar Row', cat: 'Machine · Back', area: 'Upper', beginner: true, illo: 'barbell',
-    summary: 'A barbell anchored at one end that you load with plates and row toward you. A sturdy way to build a thick, strong back.',
+    summary: 'A barbell anchored at one end (in a corner or floor socket — a “landmine”) that you load with plates and row toward you. A sturdy way to train your mid-back and lats.',
     muscles: [
       { n: 'Mid-back', primary: true },
       { n: 'Lats', primary: true },
@@ -445,19 +445,19 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     map: ['midback', 'lats', 'biceps'],
     quick: [
       { ic: 'list', k: 'Stance', v: 'Feet either side of the bar' },
-      { ic: 'list', k: 'Hinge', v: 'Bend at the hips, flat back' },
-      { ic: 'list', k: 'Grip', v: 'V-handle around the bar' },
+      { ic: 'list', k: 'Hinge', v: 'Push hips back, chest down, flat back' },
+      { ic: 'list', k: 'Grip', v: 'V-handle (double-D handle) under the bar' },
       { ic: 'list', k: 'Reps', v: '2–3 sets of 8–10' },
     ],
     setup: [
       'Load light plates on the working end of the bar.',
-      'Straddle the bar and hinge forward with a flat back.',
-      'Hook the handle under the bar and hold with both hands.',
+      'Straddle the bar and hinge forward — push your hips back, chest down, back flat.',
+      'Hook the V-handle under the bar and hold with both hands.',
     ],
     movement: [
-      'Row the bar up toward your stomach, elbows close.',
+      'Brace your core and exhale as you row the bar toward your stomach, elbows close.',
       'Squeeze your back at the top.',
-      'Lower slowly to a full stretch.',
+      'Lower slowly to a full stretch — keep your back flat, don’t round.',
     ],
     mistakes: [
       { t: 'Rounding the back', w: 'Risky for the lower back.', f: 'Keep your chest up and spine flat the whole time.' },
@@ -479,8 +479,8 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     quick: [
       { ic: 'list', k: 'Grip', v: 'Slightly wider than shoulders' },
       { ic: 'list', k: 'Range', v: 'Dead hang to chin over bar' },
-      { ic: 'list', k: 'Help', v: 'Use a band if needed' },
-      { ic: 'list', k: 'Reps', v: 'Aim for 3–5 to start' },
+      { ic: 'list', k: 'Start here', v: 'Band or assisted machine — totally normal' },
+      { ic: 'list', k: 'Reps', v: 'Even 1–3 is a great start' },
     ],
     setup: [
       'Reach up and grip the bar a bit wider than your shoulders.',
@@ -493,7 +493,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
       'Lower slowly to a full hang.',
     ],
     mistakes: [
-      { t: 'Kipping/swinging', w: 'Uses momentum and can strain shoulders.', f: 'Pull smoothly; use a band for assistance instead.' },
+      { t: 'Swinging the body', w: 'Uses momentum and can strain the shoulders.', f: 'Pull smoothly and under control; use a band or the assisted machine.' },
     ],
     alts: [
       { n: 'Assisted Pull-Up', tag: 'Easier', muscle: 'Back · Lats' },
@@ -512,7 +512,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     quick: [
       { ic: 'list', k: 'Seat', v: 'Handles at mid-chest' },
       { ic: 'list', k: 'Grip', v: 'Overhand on handles' },
-      { ic: 'list', k: 'Weight', v: 'Start light per side' },
+      { ic: 'list', k: 'Weight', v: 'Light per side — ~12 easy reps' },
       { ic: 'list', k: 'Reps', v: '2–3 sets of 10' },
     ],
     setup: [
@@ -544,7 +544,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     quick: [
       { ic: 'list', k: 'Seat', v: 'Handles at lower-chest line' },
       { ic: 'list', k: 'Grip', v: 'Overhand' },
-      { ic: 'list', k: 'Weight', v: 'Start light' },
+      { ic: 'list', k: 'Weight', v: 'Light — a weight you could lift ~15×' },
       { ic: 'list', k: 'Reps', v: '2–3 sets of 10' },
     ],
     setup: [
@@ -576,7 +576,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     quick: [
       { ic: 'list', k: 'Seat', v: 'Handles at shoulder height' },
       { ic: 'list', k: 'Grip', v: 'Overhand' },
-      { ic: 'list', k: 'Weight', v: 'Start light per side' },
+      { ic: 'list', k: 'Weight', v: 'Light per side — ~12 easy reps' },
       { ic: 'list', k: 'Reps', v: '2–3 sets of 10' },
     ],
     setup: [
@@ -630,7 +630,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
   },
   'reversehyper': {
     key: 'reversehyper', name: 'Reverse Hyperextension', cat: 'Machine · Glutes', area: 'Lower', beginner: true, illo: 'machine',
-    summary: 'You lie face-down and swing your legs up behind you against resistance. Builds the glutes and lower back gently — popular for back health.',
+    summary: 'You lie face-down and lift your legs up behind you against resistance. Works the glutes and lower back — move with control, not a big swing.',
     muscles: [
       { n: 'Glutes', primary: true },
       { n: 'Hamstrings', primary: false },
@@ -640,7 +640,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     quick: [
       { ic: 'list', k: 'Torso', v: 'Supported on the pad' },
       { ic: 'list', k: 'Legs', v: 'Lift to body height, no higher' },
-      { ic: 'list', k: 'Weight', v: 'Start light' },
+      { ic: 'list', k: 'Weight', v: 'Light — a weight you could lift ~15×' },
       { ic: 'list', k: 'Reps', v: '2–3 sets of 12' },
     ],
     setup: [
@@ -654,7 +654,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
       'Lower slowly with control.',
     ],
     mistakes: [
-      { t: 'Over-arching at the top', w: 'Hyperextends the lower back.', f: 'Lift only to a straight line, not past it.' },
+      { t: 'Over-arching at the top', w: 'Bends the lower back too far backward.', f: 'Drive with your glutes and stop at a straight line — don’t swing past it. Stop if you feel it in your lower back.' },
     ],
     alts: [
       { n: 'Glute Bridge', tag: 'Easier', muscle: 'Glutes' },
@@ -700,11 +700,11 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     muscles: [
       { n: 'Hamstrings', primary: true },
     ],
-    map: ['hamstrings', 'glutes'],
+    map: ['hamstrings'],
     quick: [
       { ic: 'list', k: 'Pad', v: 'Just above your heel' },
       { ic: 'list', k: 'Hips', v: 'Stay still against the support' },
-      { ic: 'list', k: 'Weight', v: 'Start light' },
+      { ic: 'list', k: 'Weight', v: 'Light — a weight you could lift ~15×' },
       { ic: 'list', k: 'Reps', v: '2–3 sets of 12 each leg' },
     ],
     setup: [
@@ -791,8 +791,8 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     ],
   },
   'ghr': {
-    key: 'ghr', name: 'Glute-Ham Raise', cat: 'Machine · Hamstrings', area: 'Lower', beginner: true, illo: 'bodyweight',
-    summary: 'A bodyweight move on a GHD bench where you lower and raise your torso using your hamstrings and glutes. Tough — build up gradually.',
+    key: 'ghr', name: 'Glute-Ham Raise', cat: 'Machine · Hamstrings', area: 'Lower', beginner: false, illo: 'bodyweight',
+    summary: 'An advanced bodyweight move on the glute-ham bench where you lower and raise your torso using your hamstrings. Very challenging — start with hands assisting or just the lowering part, and use leg curls until you’re strong.',
     muscles: [
       { n: 'Hamstrings', primary: true },
       { n: 'Glutes', primary: true },
@@ -801,8 +801,8 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     quick: [
       { ic: 'list', k: 'Feet', v: 'Locked against the foot plate' },
       { ic: 'list', k: 'Pad', v: 'Hips on the pad' },
-      { ic: 'list', k: 'Range', v: 'Lower as far as you control' },
-      { ic: 'list', k: 'Reps', v: '2–3 sets of 6–10' },
+      { ic: 'list', k: 'Range', v: 'Lower only as far as you control' },
+      { ic: 'list', k: 'Start', v: 'Push off your hands to assist' },
     ],
     setup: [
       'Lock your feet against the plate and rest your thighs on the pad.',
@@ -865,7 +865,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     quick: [
       { ic: 'list', k: 'Cable', v: 'Set low' },
       { ic: 'list', k: 'Elbows', v: 'Pinned at your sides' },
-      { ic: 'list', k: 'Weight', v: 'Start light' },
+      { ic: 'list', k: 'Weight', v: 'Light — a weight you could lift ~15×' },
       { ic: 'list', k: 'Reps', v: '2–3 sets of 12' },
     ],
     setup: [
@@ -930,7 +930,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
       { ic: 'list', k: 'Grip', v: 'Hands on the bars, arms straight' },
       { ic: 'list', k: 'Lean', v: 'Slightly forward for chest' },
       { ic: 'list', k: 'Range', v: 'Lower to ~90° elbows' },
-      { ic: 'list', k: 'Reps', v: 'Aim for 5–8 to start' },
+      { ic: 'list', k: 'Start here', v: 'Assisted machine, band, or bench dips' },
     ],
     setup: [
       'Grip the bars and press up to straight arms.',
@@ -952,7 +952,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
   },
   'captainschair': {
     key: 'captainschair', name: 'Captain’s Chair', cat: 'Machine · Core', area: 'Core', beginner: true, illo: 'bodyweight',
-    summary: 'A padded station where you support yourself on your forearms and raise your knees to work the lower abs. No floor needed.',
+    summary: 'A padded station where you support yourself on your forearms and raise your knees to work your abs and hip flexors. No floor needed.',
     muscles: [
       { n: 'Abs', primary: true },
       { n: 'Hip flexors', primary: false },
@@ -961,18 +961,18 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     quick: [
       { ic: 'list', k: 'Forearms', v: 'Flat on the pads' },
       { ic: 'list', k: 'Back', v: 'Against the back pad' },
-      { ic: 'list', k: 'Range', v: 'Knees toward chest' },
+      { ic: 'list', k: 'Range', v: 'Curl knees up, tilt hips' },
       { ic: 'list', k: 'Reps', v: '2–3 sets of 10–15' },
     ],
     setup: [
       'Rest your forearms on the pads and grip the handles.',
       'Press your back against the pad and let your legs hang.',
-      'Brace your core.',
+      'Brace your core and keep your lower back on the pad.',
     ],
     movement: [
-      'Raise your knees toward your chest.',
-      'Curl your hips up slightly at the top.',
-      'Lower slowly without swinging.',
+      'Breathe out and raise your knees toward your chest.',
+      'Curl your hips up at the top — that hip curl is the real ab work.',
+      'Lower slowly without swinging; don’t bear down or hold your breath.',
     ],
     mistakes: [
       { t: 'Swinging the legs', w: 'Uses momentum, not your abs.', f: 'Move slowly and pause at the top.' },
@@ -984,7 +984,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
   },
   'abcoaster': {
     key: 'abcoaster', name: 'Ab Coaster', cat: 'Machine · Core', area: 'Core', beginner: true, illo: 'machine',
-    summary: 'A machine where you kneel and your lower body swings up on a curved track to crunch the abs. Guided motion makes it beginner-friendly.',
+    summary: 'A machine where you kneel and your lower body curls up on a curved track to work the abs and hip flexors. The guided motion makes it beginner-friendly.',
     muscles: [
       { n: 'Abs', primary: true },
     ],
@@ -1055,12 +1055,12 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
     quick: [
       { ic: 'list', k: 'Pulleys', v: 'Set the height for your exercise' },
       { ic: 'list', k: 'Handles', v: 'Swap attachments as needed' },
-      { ic: 'list', k: 'Weight', v: 'Start light' },
-      { ic: 'list', k: 'Reps', v: 'Depends on the exercise' },
+      { ic: 'list', k: 'Try first', v: 'Cable chest press or a row' },
+      { ic: 'list', k: 'Reps', v: '2–3 sets of 10–12' },
     ],
     setup: [
-      'Set both pulleys to the height your exercise needs.',
-      'Attach the handles you want.',
+      'Not sure where to start? Try a cable chest press (handles at chest height) or a row.',
+      'Set both pulleys to the height your exercise needs and attach the handles.',
       'Choose a light weight to learn the movement.',
     ],
     movement: [
@@ -1092,14 +1092,14 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
       { ic: 'list', k: 'Reps', v: '2–3 sets of 5–8' },
     ],
     setup: [
-      'Set the J-hooks just below shoulder height.',
-      'Set the safety arms to catch the bar at your lowest point.',
-      'Start by practicing with just the empty barbell.',
+      'Set the J-hooks (the bar holders) just below shoulder height.',
+      'Set the safety arms just below the bottom of your squat, so they’d catch a failed rep.',
+      'Slide plates on evenly and clip the collars; practice first with just the empty bar.',
     ],
     movement: [
       'Unrack the bar onto your upper back and step back.',
-      'Squat down with control, chest up.',
-      'Drive up through your feet and re-rack carefully.',
+      'Brace your core (don’t hold your breath), squat down with control, chest up.',
+      'Drive up through your feet and re-rack carefully. If you can’t stand up, lower the bar onto the safety arms.',
     ],
     mistakes: [
       { t: 'No safety arms set', w: 'Risky if you fail a rep.', f: 'Always set the safeties before you start.' },
@@ -1118,17 +1118,17 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
       { n: 'Shoulders', primary: false },
       { n: 'Core', primary: false },
     ],
-    map: ['delts', 'shoulders', 'core'],
+    map: ['delts', 'core'],
     quick: [
       { ic: 'list', k: 'Grip', v: 'One rope end in each hand' },
       { ic: 'list', k: 'Stance', v: 'Feet wide, knees soft' },
-      { ic: 'list', k: 'Work', v: 'Try 20s on / 40s off' },
-      { ic: 'list', k: 'Rounds', v: '4–6 to start' },
+      { ic: 'list', k: 'Start', v: '10–15s waves, long rests' },
+      { ic: 'list', k: 'Breathe', v: 'Keep breathing — don’t hold it' },
     ],
     setup: [
       'Hold one rope end in each hand with a firm grip.',
       'Stand with feet shoulder-width or wider, knees slightly bent.',
-      'Brace your core and keep a tall chest.',
+      'Brace your core, keep a tall chest, and keep breathing.',
     ],
     movement: [
       'Whip both arms up and down quickly to make waves.',

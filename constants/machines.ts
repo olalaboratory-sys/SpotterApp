@@ -5969,8 +5969,7 @@ export const MACHINES: Record<string, Machine> = {
       }
     ],
     "map": [
-      "shoulders",
-      "midback"
+      "traps"
     ],
     "quick": [
       {

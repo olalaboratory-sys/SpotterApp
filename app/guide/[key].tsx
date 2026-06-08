@@ -248,7 +248,7 @@ export default function GuideScreen() {
           {/* Safety note */}
           <View style={styles.safetyNote}>
             <Ionicons name="shield-checkmark-outline" size={18} color={Colors.greenDeep} style={{ flexShrink: 0, marginTop: 1 }} />
-            <Text style={styles.safetyText}>Move slowly, breathe steadily, and stop if anything feels sharp. When in doubt, go lighter — good form beats heavy weight every time.</Text>
+            <Text style={styles.safetyText}>Move slowly and keep breathing — don't hold your breath. Stop if you feel sharp pain, dizziness, or chest pressure. New to exercise, pregnant or postpartum, or managing a heart, blood-pressure, or back condition? Check with your doctor first. Good form beats heavy weight every time.</Text>
           </View>
         </View>
       </ScrollView>
