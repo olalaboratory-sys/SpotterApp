@@ -567,7 +567,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
   },
   'isoshoulderpress': {
     key: 'isoshoulderpress', name: 'Iso-Lateral Shoulder Press', cat: 'Machine · Shoulders', area: 'Upper', beginner: true, illo: 'press',
-    summary: 'A plate-loaded overhead press where each arm works independently. The seat and back pad keep you stable while you build your shoulders.',
+    summary: 'A plate-loaded overhead press where each arm works independently. The seat and back pad keep you stable while you train your shoulders.',
     muscles: [
       { n: 'Shoulders', primary: true },
       { n: 'Triceps', primary: false },
@@ -636,7 +636,7 @@ export const EXTRA_MACHINES: Record<string, Machine> = {
       { n: 'Hamstrings', primary: false },
       { n: 'Lower back', primary: false },
     ],
-    map: ['glutes', 'hamstrings'],
+    map: ['glutes', 'hamstrings', 'lowerback'],
     quick: [
       { ic: 'list', k: 'Torso', v: 'Supported on the pad' },
       { ic: 'list', k: 'Legs', v: 'Lift to body height, no higher' },

@@ -1573,7 +1573,7 @@ export const MACHINES: Record<string, Machine> = {
     "cat": "Shoulders",
     "area": "Upper",
     "beginner": true,
-    "summary": "A machine that builds the rounded look of your shoulders by raising padded arms out to your sides. Light weights go a long way here.",
+    "summary": "A machine that trains the sides of your shoulders by raising padded arms out to your sides. Light weights go a long way here.",
     "muscles": [
       {
         "n": "Side delts",
@@ -1845,7 +1845,7 @@ export const MACHINES: Record<string, Machine> = {
       }
     ],
     "map": [
-      "midback",
+      "lowerback",
       "glutes",
       "hamstrings"
     ],
@@ -2140,7 +2140,7 @@ export const MACHINES: Record<string, Machine> = {
     "map": [
       "glutes",
       "hamstrings",
-      "midback",
+      "lowerback",
       "lats"
     ],
     "quick": [
@@ -4154,7 +4154,7 @@ export const MACHINES: Record<string, Machine> = {
     "map": [
       "hamstrings",
       "glutes",
-      "midback"
+      "lowerback"
     ],
     "quick": [
       {

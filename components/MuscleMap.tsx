@@ -20,6 +20,7 @@ export default function MuscleMap({ map }: { map: string[] }) {
   const chest = has(map, 'chest');
   const arms = has(map, 'biceps', 'triceps');
   const core = has(map, 'abs', 'core');
+  const lowerback = has(map, 'lowerback', 'erectors');
   const back = has(map, 'lats', 'midback');
   const hips = has(map, 'glutes');
   const thighs = has(map, 'quads', 'hamstrings');
@@ -48,7 +49,7 @@ export default function MuscleMap({ map }: { map: string[] }) {
       </View>
       {/* torso */}
       <Animated.View style={[styles.torsoTop, { backgroundColor: color(torsoTop) }]} />
-      <Animated.View style={[styles.torsoMid, { backgroundColor: color(core) }]} />
+      <Animated.View style={[styles.torsoMid, { backgroundColor: color(core || lowerback) }]} />
       {/* hips */}
       <Animated.View style={[styles.hips, { backgroundColor: color(hips) }]} />
       {/* legs */}
