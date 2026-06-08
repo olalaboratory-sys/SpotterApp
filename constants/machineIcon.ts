@@ -20,6 +20,11 @@ const ILLO_ICON: Record<string, IconName> = {
   pecdeck: 'contract-outline',
   press: 'arrow-up-circle-outline',
   row: 'swap-horizontal-outline',
+  treadmill: 'walk-outline',
+  elliptical: 'ellipse-outline',
+  bike: 'bicycle-outline',
+  rower: 'boat-outline',
+  stairs: 'trending-up-outline',
 };
 
 export function iconForIllo(illo?: string): IconName {

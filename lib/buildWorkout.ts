@@ -1,5 +1,5 @@
 import { allMachines, getMachine } from '../constants/machines';
-import { isFreeWeight } from '../constants/catalog';
+import { isFreeWeight, isCardio } from '../constants/catalog';
 import { Routine } from '../constants/routines';
 
 const overlap = (mapKeys: string[], focus: string[]) =>
@@ -16,7 +16,7 @@ export function buildRoutineKeys(routine: Routine, placeKeys: string[] = []): st
   const seed = inPlace.length ? inPlace : fallback;
 
   const passes = (m: ReturnType<typeof getMachine>) =>
-    (!routine.area || m.area === routine.area) && (!routine.machineOnly || !isFreeWeight(m));
+    !isCardio(m) && (!routine.area || m.area === routine.area) && (!routine.machineOnly || !isFreeWeight(m));
 
   let cands = seed.filter(passes);
 

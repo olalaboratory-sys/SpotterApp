@@ -5,10 +5,15 @@
 import { Machine, allMachines } from './machines';
 
 export type Family = 'Machine' | 'Cable' | 'Barbell' | 'Dumbbell' | 'Kettlebell' | 'Bands' | 'Bodyweight';
-export type BodyArea = 'Chest' | 'Back' | 'Shoulders' | 'Arms' | 'Legs' | 'Glutes' | 'Core' | 'Cable';
+export type BodyArea = 'Chest' | 'Back' | 'Shoulders' | 'Arms' | 'Legs' | 'Glutes' | 'Core' | 'Cable' | 'Cardio';
 
 export const FREE_WEIGHT_FAMILIES: Family[] = ['Barbell', 'Dumbbell', 'Kettlebell', 'Bands', 'Bodyweight'];
-export const MACHINE_AREAS: BodyArea[] = ['Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Glutes', 'Core', 'Cable'];
+export const MACHINE_AREAS: BodyArea[] = ['Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Glutes', 'Core', 'Cable', 'Cardio'];
+
+/** True for cardio equipment (treadmill, bike, etc.) — excluded from strength routines. */
+export function isCardio(m: Machine): boolean {
+  return m.cat.split('·')[0].trim() === 'Cardio';
+}
 
 const FREE_WEIGHT_SET = new Set(['Barbell', 'Dumbbell', 'Kettlebell', 'Band', 'Bodyweight']);
 
@@ -37,6 +42,7 @@ const MUSCLE_AREA: { test: RegExp; area: BodyArea }[] = [
 
 /** Best-guess body area for a machine (used by the "by body area" grid). */
 export function bodyAreaOf(m: Machine): BodyArea {
+  if (isCardio(m)) return 'Cardio';
   if (familyOf(m) === 'Cable') return 'Cable';
   // Try the second token of cat first (e.g. "Machine · Legs").
   const tokens = m.cat.split('·').map(s => s.trim());

@@ -2,6 +2,8 @@
 // 65 beginner-authored machine guides. To regenerate, see /tmp/gen-machines.js.
 // Do not hand-edit individual entries here; edit the source data and re-run the generator.
 
+import { EXTRA_MACHINES } from './machinesExtra';
+
 export type QuickItem = { ic: string; k: string; v: string };
 export type MuscleRef = { n: string; primary: boolean };
 export type Mistake = { t: string; w: string; f: string };
@@ -6039,6 +6041,10 @@ export const MACHINES: Record<string, Machine> = {
     ]
   }
 };
+
+// Merge in the extra catalog (cardio + machines added later) so the whole app
+// sees one combined set.
+Object.assign(MACHINES, EXTRA_MACHINES);
 
 /** All machines as a flat list. */
 export function allMachines(): Machine[] {

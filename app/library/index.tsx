@@ -15,6 +15,7 @@ import {
 const AREA_ICON: Record<BodyArea, keyof typeof Ionicons.glyphMap> = {
   Chest: 'body-outline', Back: 'man-outline', Shoulders: 'barbell-outline', Arms: 'fitness-outline',
   Legs: 'walk-outline', Glutes: 'body-outline', Core: 'ellipse-outline', Cable: 'git-network-outline',
+  Cardio: 'heart-outline',
 };
 const FAMILY_ICON: Record<Family, keyof typeof Ionicons.glyphMap> = {
   Machine: 'cog-outline', Cable: 'git-network-outline', Barbell: 'barbell-outline',
