@@ -201,11 +201,11 @@ export default function HomeScreen() {
                 { n: workoutCount, label: 'workouts\ndone', icon: 'barbell-outline' as const },
                 { n: confidentCount, label: 'confident\nwith', icon: 'shield-checkmark-outline' as const },
               ].map(p => (
-                <View key={p.label} style={styles.progressCard}>
+                <PressableScale key={p.label} containerStyle={{ flex: 1 }} style={styles.progressCard} onPress={() => router.push('/progress')}>
                   <Ionicons name={p.icon} size={19} color={Colors.green} />
                   <Text style={styles.progressNum}>{p.n}</Text>
                   <Text style={styles.progressLabel}>{p.label}</Text>
-                </View>
+                </PressableScale>
               ))}
             </View>
           </View>
