@@ -49,7 +49,7 @@ function RootNavigator() {
       <Stack.Screen name="add-machine" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="library/index" />
       <Stack.Screen name="library/[category]" />
-      <Stack.Screen name="place/[id]" />
+      <Stack.Screen name="routines/index" />
       <Stack.Screen name="machine/[id]" />
       <Stack.Screen name="workout/builder" />
       <Stack.Screen name="workout/preview" />

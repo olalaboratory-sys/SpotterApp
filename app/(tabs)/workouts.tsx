@@ -7,15 +7,9 @@ import { usePlaces } from '../../context/PlacesContext';
 import { useWorkouts } from '../../context/WorkoutsContext';
 import { useAuth } from '../../context/AuthContext';
 import { labelForGoal } from '../../constants/profile';
-import { allMachines } from '../../constants/machines';
+import { ROUTINES, getRoutine, Routine } from '../../constants/routines';
+import { buildRoutineKeys } from '../../lib/buildWorkout';
 import PressableScale from '../../components/PressableScale';
-
-const PRESETS = [
-  { icon: 'body-outline' as const, title: 'Full Body Beginner', goal: 'Full body', area: null as string | null, count: 6, time: '35 min' },
-  { icon: 'arrow-up-outline' as const, title: 'Upper Body', goal: 'Upper body', area: 'Upper', count: 5, time: '30 min' },
-  { icon: 'arrow-down-outline' as const, title: 'Lower Body & Glutes', goal: 'Lower body', area: 'Lower', count: 5, time: '30 min' },
-  { icon: 'flash-outline' as const, title: 'Quick 15-min', goal: 'Full body', area: null, count: 3, time: '15 min' },
-];
 
 const FEEL_LABEL: Record<string, string> = { easy: 'Felt easy', right: 'Just right', hard: 'Felt tough' };
 
@@ -30,29 +24,38 @@ function timeAgo(d: Date | null): string {
 
 export default function WorkoutsTab() {
   const router = useRouter();
-  const { current } = usePlaces();
-  const { history, startDraft, deleteWorkout } = useWorkouts();
+  const { current, currentMachines } = usePlaces();
+  const { history, startDraft, deleteWorkout, savedRoutines } = useWorkouts();
   const { userProfile } = useAuth();
   const goals = userProfile?.goals ?? [];
   const experienceLevel = userProfile?.experienceLevel ?? null;
+  const placeKeys = useMemo(() => currentMachines.map(m => m.key), [currentMachines]);
 
-  // Surface the presets that best match the user's stated goals/experience.
+  // Routines the user has favorited.
+  const saved = useMemo(
+    () => savedRoutines.map(s => getRoutine(s.routineId)).filter((r): r is Routine => !!r),
+    [savedRoutines],
+  );
+
+  // A varied handful for quick access; the full set lives in the routine library.
+  const quickStart = useMemo(() => ROUTINES.slice(0, 5), []);
+
+  // Surface routines that best match the user's stated goals/experience.
   const recommended = useMemo(() => {
     const areas = new Set<string>();
     if (goals.includes('legs')) areas.add('Lower');
     if (goals.includes('upper') || goals.includes('posture')) areas.add('Upper');
 
-    const byArea = PRESETS.filter(p => p.area && areas.has(p.area));
+    const byArea = ROUTINES.filter(r => r.area && areas.has(r.area));
     const wantsFullBody = goals.some(g => ['confident', 'learn', 'workouts'].includes(g));
-    // Brand-new / returning lifters get the shortest session first.
     const wantsQuick = experienceLevel === 'new' || experienceLevel === 'return';
 
-    const recs: typeof PRESETS = [];
-    if (wantsQuick) { const q = PRESETS.find(p => p.title === 'Quick 15-min'); if (q) recs.push(q); }
+    const recs: Routine[] = [];
+    if (wantsQuick) { const q = getRoutine('quick-15'); if (q) recs.push(q); }
     if (wantsFullBody || (!byArea.length && !recs.length)) {
-      const fb = PRESETS.find(p => p.title === 'Full Body Beginner'); if (fb && !recs.includes(fb)) recs.push(fb);
+      const fb = getRoutine('full-body'); if (fb && !recs.includes(fb)) recs.push(fb);
     }
-    byArea.forEach(p => { if (!recs.includes(p)) recs.push(p); });
+    byArea.forEach(r => { if (!recs.includes(r)) recs.push(r); });
     return recs.slice(0, 3);
   }, [goals, experienceLevel]);
 
@@ -78,14 +81,11 @@ export default function WorkoutsTab() {
     router.push('/workout/preview');
   };
 
-  const startPreset = (p: (typeof PRESETS)[number]) => {
-    const keys = allMachines()
-      .filter(m => m.beginner && (!p.area || m.area === p.area))
-      .map(m => m.key)
-      .slice(0, p.count);
+  const startRoutine = (r: Routine) => {
+    const keys = buildRoutineKeys(r, placeKeys);
     startDraft(keys, {
-      goal: p.title, time: p.time, difficulty: 'Beginner',
-      placeId: current?.id ?? null, placeName: current?.name ?? '', title: p.title,
+      goal: r.title, time: r.time, difficulty: r.difficulty,
+      placeId: current?.id ?? null, placeName: current?.name ?? '', title: r.title,
     });
     router.push('/workout/preview');
   };
@@ -110,12 +110,12 @@ export default function WorkoutsTab() {
               <Text style={styles.sectionTitle}>Recommended for you</Text>
               <Text style={styles.recReason}>{recReason}</Text>
               <View style={styles.presets}>
-                {recommended.map(p => (
-                  <PressableScale key={p.title} style={[styles.presetCard, styles.recCard]} onPress={() => startPreset(p)}>
-                    <View style={[styles.presetIcon, styles.recIcon]}><Ionicons name={p.icon} size={22} color="#0a1f12" /></View>
+                {recommended.map(r => (
+                  <PressableScale key={r.id} style={[styles.presetCard, styles.recCard]} onPress={() => startRoutine(r)}>
+                    <View style={[styles.presetIcon, styles.recIcon]}><Ionicons name={r.icon} size={22} color="#0a1f12" /></View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.presetTitle}>{p.title}</Text>
-                      <Text style={styles.presetSub}>{p.count} exercises · {p.time}</Text>
+                      <Text style={styles.presetTitle}>{r.title}</Text>
+                      <Text style={styles.presetSub}>{r.count} exercises · {r.time}</Text>
                     </View>
                     <Ionicons name="arrow-forward" size={18} color={Colors.greenDeep} />
                   </PressableScale>
@@ -124,15 +124,38 @@ export default function WorkoutsTab() {
             </View>
           )}
 
+          {saved.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Saved routines</Text>
+              <View style={styles.presets}>
+                {saved.map(r => (
+                  <PressableScale key={r.id} style={styles.presetCard} onPress={() => startRoutine(r)}>
+                    <View style={styles.presetIcon}><Ionicons name={r.icon} size={22} color={Colors.greenDeep} /></View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.presetTitle}>{r.title}</Text>
+                      <Text style={styles.presetSub}>{r.count} exercises · {r.time}</Text>
+                    </View>
+                    <Ionicons name="bookmark" size={16} color={Colors.green} />
+                  </PressableScale>
+                ))}
+              </View>
+            </View>
+          )}
+
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quick start</Text>
+            <View style={styles.sectionHeadRow}>
+              <Text style={styles.sectionTitle}>Quick start</Text>
+              <TouchableOpacity onPress={() => router.push('/routines')}>
+                <Text style={styles.seeAll}>Browse all</Text>
+              </TouchableOpacity>
+            </View>
             <View style={styles.presets}>
-              {PRESETS.map(p => (
-                <PressableScale key={p.title} style={styles.presetCard} onPress={() => startPreset(p)}>
-                  <View style={styles.presetIcon}><Ionicons name={p.icon} size={22} color={Colors.greenDeep} /></View>
+              {quickStart.map(r => (
+                <PressableScale key={r.id} style={styles.presetCard} onPress={() => startRoutine(r)}>
+                  <View style={styles.presetIcon}><Ionicons name={r.icon} size={22} color={Colors.greenDeep} /></View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.presetTitle}>{p.title}</Text>
-                    <Text style={styles.presetSub}>{p.count} exercises · {p.time}</Text>
+                    <Text style={styles.presetTitle}>{r.title}</Text>
+                    <Text style={styles.presetSub}>{r.count} exercises · {r.time}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={Colors.labelTertiary} />
                 </PressableScale>
@@ -181,6 +204,8 @@ const styles = StyleSheet.create({
   title: { fontSize: 34, fontWeight: '700', letterSpacing: 0.4, color: Colors.labelPrimary },
   section: { paddingHorizontal: 20, marginBottom: 24 },
   sectionTitle: { fontSize: 19, fontWeight: '700', color: Colors.labelPrimary, marginBottom: 12, letterSpacing: -0.3 },
+  sectionHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  seeAll: { fontSize: 14, fontWeight: '600', color: Colors.greenDeep, marginBottom: 12 },
   buildCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
   buildTitle: { fontSize: 20, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.4 },
   buildSub: { fontSize: 14, color: Colors.labelSecondary, marginTop: 4 },

@@ -183,6 +183,14 @@ export default function HomeScreen() {
               </View>
               <Ionicons name="chevron-forward" size={18} color={Colors.labelTertiary} />
             </TouchableOpacity>
+            <TouchableOpacity style={[styles.browseRow, { marginTop: 10 }]} activeOpacity={0.85} onPress={() => router.push('/routines')}>
+              <View style={styles.browseIcon}><Ionicons name="list-outline" size={20} color={Colors.greenDeep} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.browseTitle}>Browse workout routines</Text>
+                <Text style={styles.browseSub}>Find & save ready-made routines</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.labelTertiary} />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.section}>

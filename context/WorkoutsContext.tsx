@@ -27,6 +27,13 @@ export type WorkoutRecord = {
   createdAt: Date | null;
 };
 
+/** A favorited routine, optionally scoped to a single place (placeId null = all places). */
+export type SavedRoutine = {
+  id: string;
+  routineId: string;
+  placeId: string | null;
+};
+
 const DEFAULT_META: WorkoutMeta = {
   goal: 'Full body', time: '30 min', difficulty: 'Beginner',
   placeId: null, placeName: '', title: 'Workout',
@@ -42,6 +49,11 @@ type WorkoutsContextType = {
   completeWorkout: (r: { completedCount: number; totalCount: number; setsDone: number; feel: string | null }) => Promise<string | null>;
   updateWorkoutFeel: (id: string, feel: string) => Promise<void>;
   deleteWorkout: (id: string) => Promise<void>;
+  savedRoutines: SavedRoutine[];
+  /** True if the routine is saved at all (any scope), or for a specific place when placeId is passed. */
+  isRoutineSaved: (routineId: string, placeId?: string | null) => boolean;
+  /** Toggle a routine favorite. placeId null = saved to all places. */
+  toggleRoutineSaved: (routineId: string, placeId: string | null) => Promise<void>;
 };
 
 const WorkoutsContext = createContext<WorkoutsContextType | null>(null);
@@ -52,6 +64,7 @@ export function WorkoutsProvider({ children }: { children: React.ReactNode }) {
   const [history, setHistory] = useState<WorkoutRecord[]>([]);
   const [draft, setDraft] = useState<string[]>([]);
   const [meta, setMeta] = useState<WorkoutMeta>(DEFAULT_META);
+  const [savedRoutines, setSavedRoutines] = useState<SavedRoutine[]>([]);
 
   useEffect(() => {
     if (!user) { setHistory([]); return; }
@@ -68,6 +81,35 @@ export function WorkoutsProvider({ children }: { children: React.ReactNode }) {
     }, () => {});
     return unsub;
   }, [user]);
+
+  useEffect(() => {
+    if (!user) { setSavedRoutines([]); return; }
+    const unsub = onSnapshot(collection(db, 'users', user.uid, 'savedRoutines'), snap => {
+      setSavedRoutines(snap.docs.map(d => ({
+        id: d.id, routineId: d.data().routineId, placeId: d.data().placeId ?? null,
+      })));
+    }, () => {});
+    return unsub;
+  }, [user]);
+
+  const isRoutineSaved = (routineId: string, placeId?: string | null) => {
+    if (placeId === undefined) return savedRoutines.some(s => s.routineId === routineId);
+    return savedRoutines.some(s => s.routineId === routineId && s.placeId === placeId);
+  };
+
+  const toggleRoutineSaved = async (routineId: string, placeId: string | null) => {
+    if (!user) return;
+    const existing = savedRoutines.find(s => s.routineId === routineId && s.placeId === placeId);
+    try {
+      if (existing) {
+        await deleteDoc(doc(db, 'users', user.uid, 'savedRoutines', existing.id));
+      } else {
+        await addDoc(collection(db, 'users', user.uid, 'savedRoutines'), {
+          routineId, placeId, savedAt: serverTimestamp(),
+        });
+      }
+    } catch { toast("Couldn't update your saved routines.", 'error'); }
+  };
 
   const startDraft = (keys: string[], m: WorkoutMeta) => { setDraft(keys); setMeta(m); };
   const removeFromDraft = (key: string) => setDraft(d => d.filter(k => k !== key));
@@ -110,7 +152,7 @@ export function WorkoutsProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <WorkoutsContext.Provider value={{ history, draft, meta, startDraft, removeFromDraft, swapInDraft, completeWorkout, updateWorkoutFeel, deleteWorkout }}>
+    <WorkoutsContext.Provider value={{ history, draft, meta, startDraft, removeFromDraft, swapInDraft, completeWorkout, updateWorkoutFeel, deleteWorkout, savedRoutines, isRoutineSaved, toggleRoutineSaved }}>
       {children}
     </WorkoutsContext.Provider>
   );
