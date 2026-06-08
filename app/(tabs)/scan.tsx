@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, SafeAreaView, Easing, Linking,
+  View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, SafeAreaView, Easing, Linking, Alert,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { iconForIllo } from '../../constants/machineIcon';
 import * as haptics from '../../lib/haptics';
 import { getMachine } from '../../constants/machines';
-import { analyzePhoto, MatchResult } from '../../lib/recognition';
+import { analyzePhoto, MatchResult, ScanImage } from '../../lib/recognition';
+import { dailyScanLimit, scansUsedToday, recordScan, PREMIUM_DAILY_SCANS } from '../../lib/scanLimit';
 import { usePlaces } from '../../context/PlacesContext';
+import { useAuth } from '../../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 type Phase = 'ready' | 'loading' | 'result';
@@ -46,10 +49,28 @@ function ScanCorners() {
   );
 }
 
-function ScanScreen({ onCapture, onUpload, onClose }: { onCapture: () => void; onUpload: () => void; onClose: () => void }) {
+function ScanScreen({ onScan, onClose }: { onScan: (getImage: () => Promise<ScanImage | null>) => void; onClose: () => void }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<'back' | 'front'>('back');
   const [flash, setFlash] = useState(false);
+  const cameraRef = React.useRef<CameraView>(null);
+
+  // Capture or pick, then downscale to ~512px to cut recognition cost.
+  const downscale = async (uri: string): Promise<ScanImage> => {
+    const out = await ImageManipulator.manipulateAsync(
+      uri, [{ resize: { width: 512 } }],
+      { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+    );
+    return { base64: out.base64 ?? '', mime: 'image/jpeg' };
+  };
+  const capture = async (): Promise<ScanImage | null> => {
+    const photo = await cameraRef.current?.takePictureAsync({ quality: 0.6 });
+    return photo?.uri ? downscale(photo.uri) : null;
+  };
+  const upload = async (): Promise<ScanImage | null> => {
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+    return !res.canceled && res.assets[0] ? downscale(res.assets[0].uri) : null;
+  };
 
   if (!permission?.granted) {
     // Undetermined → in-app prompt; permanently denied → deep link to Settings.
@@ -68,7 +89,7 @@ function ScanScreen({ onCapture, onUpload, onClose }: { onCapture: () => void; o
         <TouchableOpacity style={styles.btnLime} onPress={denied ? () => Linking.openSettings() : requestPermission}>
           <Text style={{ fontSize: 16, fontWeight: '600', color: Colors.ink }}>{denied ? 'Open Settings' : 'Allow Camera'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.uploadInstead} onPress={onUpload}>
+        <TouchableOpacity style={styles.uploadInstead} onPress={() => onScan(upload)}>
           <Ionicons name="image-outline" size={18} color="#fff" />
           <Text style={{ color: '#fff', fontSize: 15, fontWeight: '500' }}>Upload a photo instead</Text>
         </TouchableOpacity>
@@ -78,7 +99,7 @@ function ScanScreen({ onCapture, onUpload, onClose }: { onCapture: () => void; o
 
   return (
     <View style={styles.container}>
-      <CameraView style={StyleSheet.absoluteFill} facing={facing} enableTorch={flash} />
+      <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={facing} enableTorch={flash} />
       <View style={styles.vignette} />
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.topBar}>
@@ -102,10 +123,10 @@ function ScanScreen({ onCapture, onUpload, onClose }: { onCapture: () => void; o
       </View>
 
       <View style={styles.controls}>
-        <TouchableOpacity style={styles.sideBtn} onPress={onUpload} accessibilityRole="button" accessibilityLabel="Upload a photo from your library">
+        <TouchableOpacity style={styles.sideBtn} onPress={() => onScan(upload)} accessibilityRole="button" accessibilityLabel="Upload a photo from your library">
           <Ionicons name="image-outline" size={20} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.captureBtn} onPress={onCapture} accessibilityRole="button" accessibilityLabel="Capture photo to identify machine">
+        <TouchableOpacity style={styles.captureBtn} onPress={() => onScan(capture)} accessibilityRole="button" accessibilityLabel="Capture photo to identify machine">
           <View style={styles.captureBtnInner} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.sideBtn} onPress={() => setFacing(f => (f === 'back' ? 'front' : 'back'))} accessibilityRole="button" accessibilityLabel="Flip camera">
@@ -226,21 +247,37 @@ function ResultSheet({ result, onViewGuide, onRetake, onManual }: {
 export default function ScanTab() {
   const router = useRouter();
   const { current, saveTo } = usePlaces();
+  const { userProfile } = useAuth();
   const [phase, setPhase] = useState<Phase>('ready');
   const [result, setResult] = useState<MatchResult | null>(null);
 
-  const runAnalysis = async (uri?: string) => {
+  const isPremium = userProfile?.subscriptionStatus === 'active';
+
+  // Enforce the daily scan cap, then capture/pick → analyze.
+  const runScan = async (getImage: () => Promise<ScanImage | null>) => {
+    const limit = dailyScanLimit(isPremium);
+    const used = await scansUsedToday();
+    if (used >= limit) {
+      if (isPremium) {
+        Alert.alert('Daily limit reached', `You've used all ${limit} scans today. It resets tomorrow.`);
+      } else {
+        Alert.alert(
+          'Daily scan limit reached',
+          `Your plan includes ${limit} scans a day. Go Premium for ${PREMIUM_DAILY_SCANS} scans a day.`,
+          [{ text: 'Not now', style: 'cancel' }, { text: 'Go Premium', onPress: () => router.push('/paywall') }],
+        );
+      }
+      return;
+    }
     setPhase('loading');
-    const r = await analyzePhoto(uri);
+    const image = await getImage();
+    if (!image || !image.base64) { setPhase('ready'); return; }
+    await recordScan();
+    const r = await analyzePhoto(image);
     setResult(r);
     setPhase('result');
     if (r.top.confidence >= 70) haptics.success();
     else haptics.warn();
-  };
-
-  const upload = async () => {
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
-    if (!res.canceled && res.assets[0]) runAnalysis(res.assets[0].uri);
   };
 
   const viewGuide = (key: string) => {
@@ -262,7 +299,7 @@ export default function ScanTab() {
       />
     );
   }
-  return <ScanScreen onCapture={() => runAnalysis()} onUpload={upload} onClose={() => router.push('/(tabs)')} />;
+  return <ScanScreen onScan={runScan} onClose={() => router.push('/(tabs)')} />;
 }
 
 const styles = StyleSheet.create({

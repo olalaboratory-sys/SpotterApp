@@ -41,6 +41,7 @@ type AuthContextType = {
   handleAppleCredential: (idToken: string, rawNonce: string) => Promise<void>;
   signOut: () => Promise<void>;
   startTrial: (planId: string) => Promise<void>;
+  activateSubscription: (planId: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
 
@@ -151,12 +152,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await refreshProfile();
   };
 
+  // Immediate purchase (e.g. lifetime) — no trial, full access now.
+  const activateSubscription = async (planId: string) => {
+    if (!user) return;
+    await updateDoc(doc(db, 'users', user.uid), {
+      subscriptionStatus: 'active',
+      onboardingCompleted: true,
+      selectedPlan: planId,
+    });
+    await refreshProfile();
+  };
+
   return (
     <AuthContext.Provider value={{
       user, userProfile, loading,
       signInWithEmail, signUpWithEmail,
       handleGoogleCredential, handleAppleCredential,
-      signOut, startTrial, refreshProfile,
+      signOut, startTrial, activateSubscription, refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>

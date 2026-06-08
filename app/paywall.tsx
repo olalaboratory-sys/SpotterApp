@@ -39,7 +39,7 @@ const PLANS = [
 ];
 
 const BENEFITS = [
-  { icon: 'scan-outline' as const, title: 'Unlimited machine scans', sub: 'No daily limits — scan everything' },
+  { icon: 'scan-outline' as const, title: '100 machine scans a day', sub: 'Plenty for any gym session (free: 10/day)' },
   { icon: 'list-outline' as const, title: 'Personalized machine workouts', sub: 'Built from the machines at your gym' },
   { icon: 'bookmark-outline' as const, title: 'Offline machine guides', sub: 'Works even with no signal at the gym' },
   { icon: 'locate-outline' as const, title: 'Full progress tracking', sub: 'Confidence, weights, history' },
@@ -54,7 +54,7 @@ const TRIAL = [
 
 export default function PaywallScreen() {
   const router = useRouter();
-  const { startTrial } = useAuth();
+  const { startTrial, activateSubscription } = useAuth();
   const [plan, setPlan] = useState('monthly');
   const [seen, setSeen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -64,7 +64,8 @@ export default function PaywallScreen() {
     setSaving(true);
     try {
       const res = await purchasePlan(plan as PlanId);
-      if (res.success) await startTrial(plan);
+      // Lifetime is an immediate purchase → activate now; subscriptions start a trial.
+      if (res.success) await (plan === 'lifetime' ? activateSubscription(plan) : startTrial(plan));
       router.replace('/(tabs)');
     } catch {
       router.replace('/(tabs)');
@@ -135,6 +136,11 @@ export default function PaywallScreen() {
             {BENEFITS.map((b, i) => (
               <BenefitRow key={b.title} icon={b.icon} title={b.title} sub={b.sub} index={i} />
             ))}
+          </View>
+
+          <View style={styles.scanNote}>
+            <Ionicons name="information-circle-outline" size={15} color={Colors.lime} />
+            <Text style={styles.scanNoteText}>Free & trial: 10 machine scans/day · Premium: 100/day</Text>
           </View>
 
           {/* Trial timeline */}
@@ -244,7 +250,9 @@ const styles = StyleSheet.create({
   heroTitle: { fontSize: 30, fontWeight: '700', letterSpacing: -0.7, color: '#fff', textAlign: 'center', lineHeight: 36 },
   heroLime: { color: Colors.lime },
   heroSub: { fontSize: 15, color: 'rgba(223,247,231,0.66)', textAlign: 'center', lineHeight: 22, maxWidth: 290 },
-  benefits: { gap: 14, paddingBottom: 24 },
+  benefits: { gap: 14, paddingBottom: 16 },
+  scanNote: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(201,251,78,0.1)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 22 },
+  scanNoteText: { flex: 1, fontSize: 12, fontWeight: '600', color: 'rgba(231,236,245,0.85)' },
   benefitRow: { flexDirection: 'row', gap: 13, alignItems: 'flex-start' },
   benefitIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   benefitText: { flex: 1 },
