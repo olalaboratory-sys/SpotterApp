@@ -5,7 +5,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { iconForIllo } from '../../constants/machineIcon';
+import MachineIcon from '../../components/MachineIcon';
 import * as haptics from '../../lib/haptics';
 import { getNotifs } from '../../lib/prefs';
 import BottomSheet from '../../components/BottomSheet';
@@ -137,7 +137,7 @@ export default function WorkoutSession() {
         </View>
 
         <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
-          <View style={styles.illo}><Ionicons name={iconForIllo(machine.illo)} size={90} color={Colors.lime} /></View>
+          <View style={styles.illo}><MachineIcon illo={machine.illo} size={86} color={Colors.lime} /></View>
           <Text style={styles.exName}>{machine.name}</Text>
           <Text style={styles.exCat}>{machine.cat}</Text>
 

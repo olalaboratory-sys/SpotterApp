@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Ima
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { iconForKey } from '../../constants/machineIcon';
+import MachineIcon from '../../components/MachineIcon';
 import { usePlaces } from '../../context/PlacesContext';
 import PlacePickerSheet from '../../components/PlacePickerSheet';
 import SwipeableRow from '../../components/SwipeableRow';
@@ -147,7 +147,7 @@ export default function MyPlacesTab() {
                       <View style={styles.cardImage}>
                         {m.photoUri
                           ? <Image source={{ uri: m.photoUri }} style={styles.cardPhoto} resizeMode="cover" />
-                          : <Ionicons name={iconForKey(m.key)} size={34} color={Colors.green} />}
+                          : <MachineIcon machineKey={m.key} size={32} color={Colors.green} />}
                       </View>
                       <Text style={styles.cardName} numberOfLines={1}>{m.name}</Text>
                       {trained ? (

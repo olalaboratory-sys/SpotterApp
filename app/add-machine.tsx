@@ -9,7 +9,7 @@ import { Colors } from '../constants/colors';
 import { usePlaces } from '../context/PlacesContext';
 import { searchMachines } from '../constants/catalog';
 import { Machine } from '../constants/machines';
-import { iconForKey } from '../constants/machineIcon';
+import MachineIcon from '../components/MachineIcon';
 import * as haptics from '../lib/haptics';
 import PlacePickerSheet from '../components/PlacePickerSheet';
 
@@ -155,7 +155,7 @@ export default function AddMachineModal() {
                   const saved = current ? isSaved(m.key, current.id) : false;
                   return (
                     <View key={m.key} style={styles.resultRow}>
-                      <View style={styles.resultIcon}><Ionicons name={iconForKey(m.key)} size={20} color={Colors.greenDeep} /></View>
+                      <View style={styles.resultIcon}><MachineIcon machineKey={m.key} size={20} color={Colors.greenDeep} /></View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.resultName}>{m.name}</Text>
                         <Text style={styles.resultSub}>{m.cat}</Text>

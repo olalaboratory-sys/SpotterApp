@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { iconForKey } from '../../constants/machineIcon';
+import MachineIcon from '../../components/MachineIcon';
 import { allMachines } from '../../constants/machines';
 import { workoutStreak } from '../../lib/streak';
 import { useCountUp } from '../../lib/useCountUp';
@@ -158,7 +158,7 @@ export default function HomeScreen() {
                     <View style={styles.recentImagePlaceholder}>
                       {m.photoUri
                         ? <Image source={{ uri: m.photoUri }} style={styles.recentPhoto} resizeMode="cover" />
-                        : <Ionicons name={iconForKey(m.key)} size={36} color={Colors.green} />}
+                        : <MachineIcon machineKey={m.key} size={34} color={Colors.green} />}
                     </View>
                     <View style={styles.recentInfo}>
                       <Text style={styles.recentName} numberOfLines={1}>{m.name}</Text>

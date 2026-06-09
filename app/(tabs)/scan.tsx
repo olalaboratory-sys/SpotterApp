@@ -8,7 +8,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { iconForIllo } from '../../constants/machineIcon';
+import MachineIcon from '../../components/MachineIcon';
 import * as haptics from '../../lib/haptics';
 import { getMachine } from '../../constants/machines';
 import { analyzePhoto, MatchResult, ScanImage, ScanLimitError } from '../../lib/recognition';
@@ -195,7 +195,7 @@ function ResultSheet({ result, onViewGuide, onRetake, onManual }: {
             <Text style={styles.lowHint}>Not sure about this one — check the matches below or add it yourself.</Text>
           )}
           <View style={styles.resultMachine}>
-            <View style={styles.resultImage}><Ionicons name={iconForIllo(top.illo)} size={48} color={Colors.green} /></View>
+            <View style={styles.resultImage}><MachineIcon illo={top.illo} size={46} color={Colors.green} /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.resultName}>{top.name}</Text>
               <View style={{ flexDirection: 'row', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
@@ -216,7 +216,7 @@ function ResultSheet({ result, onViewGuide, onRetake, onManual }: {
                 const m = getMachine(a.key);
                 return (
                   <TouchableOpacity key={a.key} style={styles.altCard} onPress={() => onViewGuide(a.key)}>
-                    <View style={styles.altIcon}><Ionicons name={iconForIllo(m.illo)} size={18} color={Colors.greenDeep} /></View>
+                    <View style={styles.altIcon}><MachineIcon illo={m.illo} size={18} color={Colors.greenDeep} /></View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 15, fontWeight: '600', color: Colors.labelPrimary }}>{m.name}</Text>
                       <Text style={{ fontSize: 12, color: Colors.labelSecondary }}>{m.cat}</Text>

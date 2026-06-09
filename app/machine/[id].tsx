@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../constants/colors';
 import { usePlaces } from '../../context/PlacesContext';
 import { getMachine } from '../../constants/machines';
-import { iconForKey } from '../../constants/machineIcon';
+import MachineIcon from '../../components/MachineIcon';
 import * as haptics from '../../lib/haptics';
 
 export default function SavedMachineDetail() {
@@ -63,7 +63,7 @@ export default function SavedMachineDetail() {
         <View style={styles.heroImage}>
           {entry.photoUri
             ? <Image source={{ uri: entry.photoUri }} style={styles.heroPhoto} resizeMode="cover" />
-            : <Ionicons name={iconForKey(entry.key)} size={72} color={Colors.lime} />}
+            : <MachineIcon machineKey={entry.key} size={68} color={Colors.lime} />}
         </View>
         <View style={styles.heroText}>
           <Text style={styles.heroName}>{entry.name}</Text>
