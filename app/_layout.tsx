@@ -6,6 +6,11 @@ import { PlacesProvider } from '../context/PlacesContext';
 import { WorkoutsProvider } from '../context/WorkoutsContext';
 import { ToastProvider } from '../context/ToastContext';
 
+// When true, email/password users are blocked until they confirm their email.
+// Kept off for now (verification email still gets sent on sign-up) so delivery
+// hiccups don't lock people out. Flip to true before launch to hard-enforce.
+const REQUIRE_EMAIL_VERIFICATION = false;
+
 function RootNavigator() {
   const { user, userProfile, loading, emailVerified } = useAuth();
   const segments = useSegments();
@@ -29,7 +34,7 @@ function RootNavigator() {
 
     // Email/password sign-ups must confirm their address first. Social logins are
     // verified by their provider, so emailVerified is already true for them.
-    if (!emailVerified) {
+    if (REQUIRE_EMAIL_VERIFICATION && !emailVerified) {
       if (!onVerify) router.replace('/verify-email');
       return;
     }
@@ -40,8 +45,8 @@ function RootNavigator() {
       return;
     }
 
-    // Fully set up — bounce out of auth/onboarding or the root index.
-    if (inAuth || inOnboarding || group === undefined) {
+    // Fully set up — bounce out of auth/onboarding/verify or the root index.
+    if (inAuth || inOnboarding || onVerify || group === undefined) {
       router.replace('/(tabs)');
     }
   }, [user, userProfile, loading, emailVerified, segments, router]);
