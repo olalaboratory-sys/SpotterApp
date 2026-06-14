@@ -1,12 +1,12 @@
 // Fill in your Firebase project values from:
 // Firebase Console → Project Settings → Your apps → Web app → SDK setup and configuration
 export const firebaseConfig = {
-  apiKey: "REPLACE_WITH_YOUR_API_KEY",
-  authDomain: "REPLACE_WITH_YOUR_AUTH_DOMAIN.firebaseapp.com",
-  projectId: "REPLACE_WITH_YOUR_PROJECT_ID",
-  storageBucket: "REPLACE_WITH_YOUR_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "REPLACE_WITH_YOUR_MESSAGING_SENDER_ID",
-  appId: "REPLACE_WITH_YOUR_APP_ID",
+  apiKey: "AIzaSyAX9MzW0Q7BE5uxhHI0bnC3njVjIKaxIFM",
+  authDomain: "spotterapp-7b72b.firebaseapp.com",
+  projectId: "spotterapp-7b72b",
+  storageBucket: "spotterapp-7b72b.firebasestorage.app",
+  messagingSenderId: "323991484767",
+  appId: "1:323991484767:web:40dfb46f2a80ee376edeea",
 };
 
 // Firebase Console → Authentication → Sign-in method → Google → Web client ID
