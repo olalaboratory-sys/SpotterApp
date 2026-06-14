@@ -10,7 +10,7 @@ export const firebaseConfig = {
 };
 
 // Firebase Console → Authentication → Sign-in method → Google → Web client ID
-export const googleWebClientId = "REPLACE_WITH_YOUR_WEB_CLIENT_ID.apps.googleusercontent.com";
+export const googleWebClientId = "323991484767-c3k0av83vruj741jcmlhcj0mkjlmfheo.apps.googleusercontent.com";
 // Firebase Console → Authentication → Sign-in method → Google → iOS client ID
 export const googleIosClientId = "REPLACE_WITH_YOUR_IOS_CLIENT_ID.apps.googleusercontent.com";
 
