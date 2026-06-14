@@ -15,6 +15,7 @@ const PREMIUM_DAILY = 100;
 type CatalogItem = { key: string; name: string };
 type Match = { key: string; confidence: number };
 type MatchResult = { top: Match; alternatives: Match[] };
+type NotMachine = { notMachine: true };
 
 /**
  * Identifies a gym machine from a photo using Gemini Flash. The API key lives
@@ -24,7 +25,7 @@ type MatchResult = { top: Match; alternatives: Match[] };
  */
 export const recognizeMachine = onCall(
   { secrets: [GEMINI_API_KEY], cors: true, enforceAppCheck: false },
-  async (req): Promise<MatchResult> => {
+  async (req): Promise<MatchResult | NotMachine> => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError('unauthenticated', 'Please sign in to scan.');
 
@@ -56,11 +57,15 @@ export const recognizeMachine = onCall(
     const keySet = new Set(catalog.map((c) => c.key));
     const list = catalog.map((c) => `${c.key}: ${c.name}`).join('\n');
     const prompt =
-      `You identify gym equipment from a photo. Choose the single best match and up to ` +
+      `You identify gym equipment from a photo. First decide whether the main subject ` +
+      `is a piece of gym or exercise equipment (a machine, rack, bench, cable station, ` +
+      `or free weight). If it is NOT gym equipment — for example a person, food, an ` +
+      `animal, a random household object, scenery, or an empty room — respond with ` +
+      `exactly {"isMachine": false}. Otherwise choose the single best match and up to ` +
       `2 alternatives from THIS list only (use the exact key on the left):\n\n${list}\n\n` +
-      `Respond with JSON: {"top":{"key":"<key>","confidence":<0-100>},` +
+      `Respond with JSON: {"isMachine": true, "top":{"key":"<key>","confidence":<0-100>},` +
       `"alternatives":[{"key":"<key>","confidence":<0-100>}]}. ` +
-      `If unsure, still pick the closest and use a low confidence.`;
+      `If unsure which machine it is, still pick the closest and use a low confidence.`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY.value()}`;
     const res = await fetch(url, {
@@ -81,6 +86,9 @@ export const recognizeMachine = onCall(
     } catch {
       throw new HttpsError('internal', 'Could not read recognition result.');
     }
+
+    // The subject isn't gym equipment — tell the app so it can nudge the user.
+    if (parsed?.isMachine === false) return { notMachine: true };
 
     const clamp = (n: unknown) => Math.max(1, Math.min(100, Math.round(Number(n) || 0)));
     const valid = (k: unknown): k is string => typeof k === 'string' && keySet.has(k);

@@ -17,6 +17,13 @@ export type MatchResult = {
   top: Match;
   alternatives: Match[];
 };
+/** Returned when the photo isn't a gym machine at all. */
+export type NotMachineResult = { notMachine: true };
+export type ScanResult = MatchResult | NotMachineResult;
+
+export function isNotMachine(r: ScanResult): r is NotMachineResult {
+  return (r as NotMachineResult).notMachine === true;
+}
 
 /** A captured/picked, downscaled image ready to send for recognition. */
 export type ScanImage = { base64: string; mime: string };
@@ -28,7 +35,7 @@ export class ScanLimitError extends Error {
 
 const keyConfigured = () => !!geminiApiKey && !geminiApiKey.startsWith('REPLACE');
 
-export async function analyzePhoto(image?: ScanImage): Promise<MatchResult> {
+export async function analyzePhoto(image?: ScanImage): Promise<ScanResult> {
   // Preferred: secure Cloud Function proxy (key hidden, limit enforced server-side).
   if (image && useRecognitionProxy) {
     return recognizeViaProxy(image);
@@ -46,12 +53,13 @@ export async function analyzePhoto(image?: ScanImage): Promise<MatchResult> {
 
 // ---- Cloud Function proxy --------------------------------------------------
 
-async function recognizeViaProxy(image: ScanImage): Promise<MatchResult> {
+async function recognizeViaProxy(image: ScanImage): Promise<ScanResult> {
   try {
     const fn = httpsCallable(getFunctions(app), 'recognizeMachine');
     const catalog = scannableCatalog().map(m => ({ key: m.key, name: m.name }));
     const res = await fn({ image: image.base64, mime: image.mime, catalog });
-    const data = res.data as MatchResult;
+    const data = res.data as ScanResult;
+    if (isNotMachine(data)) return data;
     if (!data?.top?.key || !MACHINES[data.top.key]) throw new Error('bad result');
     return data;
   } catch (e: any) {
@@ -69,16 +77,19 @@ function scannableCatalog() {
   return allMachines().filter(m => !isFreeWeight(m));
 }
 
-async function geminiRecognize(image: ScanImage): Promise<MatchResult> {
+async function geminiRecognize(image: ScanImage): Promise<ScanResult> {
   const catalog = scannableCatalog();
   const list = catalog.map(m => `${m.key}: ${m.name}`).join('\n');
 
   const prompt =
-    `You identify gym equipment from a photo. Choose the single best match and up to ` +
-    `2 alternatives from THIS list only (use the exact key on the left):\n\n${list}\n\n` +
-    `Respond with JSON: {"top":{"key":"<key>","confidence":<0-100>},` +
+    `You identify gym equipment from a photo. First decide whether the main subject ` +
+    `is a piece of gym or exercise equipment. If it is NOT gym equipment — e.g. a ` +
+    `person, food, an animal, a random household object, scenery, or an empty room — ` +
+    `respond with exactly {"isMachine": false}. Otherwise choose the single best match ` +
+    `and up to 2 alternatives from THIS list only (use the exact key on the left):\n\n${list}\n\n` +
+    `Respond with JSON: {"isMachine": true, "top":{"key":"<key>","confidence":<0-100>},` +
     `"alternatives":[{"key":"<key>","confidence":<0-100>}]}. ` +
-    `confidence is how sure you are. If unsure, still pick the closest and use a low confidence.`;
+    `confidence is how sure you are. If unsure which machine, still pick the closest and use a low confidence.`;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`;
   const res = await fetch(url, {
@@ -93,6 +104,8 @@ async function geminiRecognize(image: ScanImage): Promise<MatchResult> {
   const data = await res.json();
   const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
   const parsed = JSON.parse(text);
+
+  if (parsed?.isMachine === false) return { notMachine: true };
 
   const valid = (k: unknown): k is string => typeof k === 'string' && !!MACHINES[k];
   const clamp = (n: unknown) => Math.max(1, Math.min(100, Math.round(Number(n) || 0)));
@@ -116,7 +129,10 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function stubResult(): MatchResult {
+function stubResult(): ScanResult {
+  // Occasionally simulate a non-machine photo so the "not a machine" UI is
+  // exercisable without a key/proxy.
+  if (Math.random() < 0.12) return { notMachine: true };
   const keys = scannableCatalog().map(m => m.key);
   const topKey = pick(keys);
   const topMachine = getMachine(topKey);

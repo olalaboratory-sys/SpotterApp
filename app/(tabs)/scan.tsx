@@ -11,7 +11,7 @@ import { Colors } from '../../constants/colors';
 import MachineIcon from '../../components/MachineIcon';
 import * as haptics from '../../lib/haptics';
 import { getMachine } from '../../constants/machines';
-import { analyzePhoto, MatchResult, ScanImage, ScanLimitError } from '../../lib/recognition';
+import { analyzePhoto, MatchResult, ScanResult, ScanImage, ScanLimitError, isNotMachine } from '../../lib/recognition';
 import { dailyScanLimit, scansUsedToday, recordScan, PREMIUM_DAILY_SCANS } from '../../lib/scanLimit';
 import { usePlaces } from '../../context/PlacesContext';
 import { useAuth } from '../../context/AuthContext';
@@ -168,6 +168,43 @@ function LoadingScreen() {
   );
 }
 
+function NotMachineSheet({ onRetake, onManual, onBrowse }: {
+  onRetake: () => void;
+  onManual: () => void;
+  onBrowse: () => void;
+}) {
+  return (
+    <View style={[styles.container, { justifyContent: 'flex-end' }]}>
+      <View style={styles.dimOverlay} />
+      <SafeAreaView>
+        <View style={styles.resultSheet}>
+          <View style={styles.resultHandle} />
+          <View style={styles.notMachineIcon}>
+            <Ionicons name="help-circle-outline" size={40} color={Colors.amber} />
+          </View>
+          <Text style={styles.notMachineTitle}>That doesn't look like a gym machine</Text>
+          <Text style={styles.notMachineBody}>
+            Point the camera so the equipment fills the frame and try again — or find it
+            another way.
+          </Text>
+          <TouchableOpacity style={styles.viewGuideBtn} onPress={onRetake}>
+            <Ionicons name="scan-outline" size={19} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.viewGuideBtnText}>Try again</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.notMachineSecondary} onPress={onBrowse}>
+            <Ionicons name="library-outline" size={18} color={Colors.greenDeep} />
+            <Text style={styles.notMachineSecondaryText}>Browse the library</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.notMachineSecondary} onPress={onManual}>
+            <Ionicons name="add-circle-outline" size={18} color={Colors.greenDeep} />
+            <Text style={styles.notMachineSecondaryText}>Add it manually</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </View>
+  );
+}
+
 function ResultSheet({ result, onViewGuide, onRetake, onManual }: {
   result: MatchResult;
   onViewGuide: (key: string) => void;
@@ -249,7 +286,7 @@ export default function ScanTab() {
   const { current, saveTo } = usePlaces();
   const { userProfile } = useAuth();
   const [phase, setPhase] = useState<Phase>('ready');
-  const [result, setResult] = useState<MatchResult | null>(null);
+  const [result, setResult] = useState<ScanResult | null>(null);
 
   const isPremium = userProfile?.subscriptionStatus === 'active';
 
@@ -280,7 +317,8 @@ export default function ScanTab() {
       const r = await analyzePhoto(image);
       setResult(r);
       setPhase('result');
-      if (r.top.confidence >= 70) haptics.success();
+      if (isNotMachine(r)) haptics.warn();
+      else if (r.top.confidence >= 70) haptics.success();
       else haptics.warn();
     } catch (e) {
       setPhase('ready');
@@ -299,12 +337,22 @@ export default function ScanTab() {
 
   if (phase === 'loading') return <LoadingScreen />;
   if (phase === 'result' && result) {
+    const reset = () => { setPhase('ready'); setResult(null); };
+    if (isNotMachine(result)) {
+      return (
+        <NotMachineSheet
+          onRetake={reset}
+          onBrowse={() => { reset(); router.push('/library'); }}
+          onManual={() => { reset(); router.push('/add-machine'); }}
+        />
+      );
+    }
     return (
       <ResultSheet
         result={result}
         onViewGuide={viewGuide}
-        onRetake={() => { setPhase('ready'); setResult(null); }}
-        onManual={() => { setPhase('ready'); setResult(null); router.push('/add-machine'); }}
+        onRetake={reset}
+        onManual={() => { reset(); router.push('/add-machine'); }}
       />
     );
   }
@@ -354,6 +402,11 @@ const styles = StyleSheet.create({
   viewGuideBtn: { height: 54, backgroundColor: Colors.green, borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   viewGuideBtnText: { fontSize: 17, fontWeight: '600', color: '#fff', letterSpacing: -0.3 },
   retakeBtn: { height: 48, borderRadius: 14, backgroundColor: '#f2f2f7', alignItems: 'center', justifyContent: 'center', marginTop: 10 },
+  notMachineIcon: { width: 72, height: 72, borderRadius: 20, backgroundColor: Colors.mist, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 16 },
+  notMachineTitle: { fontSize: 21, fontWeight: '700', color: Colors.labelPrimary, letterSpacing: -0.4, textAlign: 'center', marginBottom: 8 },
+  notMachineBody: { fontSize: 15, color: Colors.labelSecondary, textAlign: 'center', lineHeight: 21, marginBottom: 22, paddingHorizontal: 8 },
+  notMachineSecondary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 48, borderRadius: 14, marginTop: 8 },
+  notMachineSecondaryText: { fontSize: 15, fontWeight: '600', color: Colors.greenDeep },
   retakeBtnText: { fontSize: 16, fontWeight: '500', color: Colors.labelPrimary },
   btnLime: { height: 52, paddingHorizontal: 28, borderRadius: 16, backgroundColor: Colors.lime, alignItems: 'center', justifyContent: 'center' },
 });
