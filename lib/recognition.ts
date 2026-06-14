@@ -82,14 +82,17 @@ async function geminiRecognize(image: ScanImage): Promise<ScanResult> {
   const list = catalog.map(m => `${m.key}: ${m.name}`).join('\n');
 
   const prompt =
-    `You identify gym equipment from a photo. First decide whether the main subject ` +
-    `is a piece of gym or exercise equipment. If it is NOT gym equipment — e.g. a ` +
-    `person, food, an animal, a random household object, scenery, or an empty room — ` +
-    `respond with exactly {"isMachine": false}. Otherwise choose the single best match ` +
-    `and up to 2 alternatives from THIS list only (use the exact key on the left):\n\n${list}\n\n` +
-    `Respond with JSON: {"isMachine": true, "top":{"key":"<key>","confidence":<0-100>},` +
-    `"alternatives":[{"key":"<key>","confidence":<0-100>}]}. ` +
-    `confidence is how sure you are. If unsure which machine, still pick the closest and use a low confidence.`;
+    `You are a strict classifier for a gym-equipment app.\n\n` +
+    `STEP 1 — Decide if the MAIN subject is a real piece of gym or exercise equipment ` +
+    `shown in a gym/workout context. Be conservative and default to NO. If it is a ` +
+    `person or body part (leg, arm, hand, face), an animal, food, a household or office ` +
+    `object (lamp, chair, table, appliance, bottle), a vehicle, scenery, or an empty ` +
+    `room — or you are not clearly confident — respond EXACTLY with {"isMachine": false}. ` +
+    `Do NOT pick a machine for a non-gym object just because the shape looks similar.\n\n` +
+    `STEP 2 — ONLY if it is clearly gym equipment, choose the single best match and up to ` +
+    `2 alternatives from THIS list only (use the exact key on the left):\n\n${list}\n\n` +
+    `Then respond with JSON: {"isMachine": true, "top":{"key":"<key>","confidence":<0-100>},` +
+    `"alternatives":[{"key":"<key>","confidence":<0-100>}]}.`;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`;
   const res = await fetch(url, {

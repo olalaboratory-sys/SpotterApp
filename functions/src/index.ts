@@ -57,15 +57,20 @@ export const recognizeMachine = onCall(
     const keySet = new Set(catalog.map((c) => c.key));
     const list = catalog.map((c) => `${c.key}: ${c.name}`).join('\n');
     const prompt =
-      `You identify gym equipment from a photo. First decide whether the main subject ` +
-      `is a piece of gym or exercise equipment (a machine, rack, bench, cable station, ` +
-      `or free weight). If it is NOT gym equipment — for example a person, food, an ` +
-      `animal, a random household object, scenery, or an empty room — respond with ` +
-      `exactly {"isMachine": false}. Otherwise choose the single best match and up to ` +
-      `2 alternatives from THIS list only (use the exact key on the left):\n\n${list}\n\n` +
-      `Respond with JSON: {"isMachine": true, "top":{"key":"<key>","confidence":<0-100>},` +
-      `"alternatives":[{"key":"<key>","confidence":<0-100>}]}. ` +
-      `If unsure which machine it is, still pick the closest and use a low confidence.`;
+      `You are a strict classifier for a gym-equipment app.\n\n` +
+      `STEP 1 — Decide if the MAIN subject of the photo is a real piece of gym or ` +
+      `exercise equipment (a weight machine, rack, bench, cable station, cardio ` +
+      `machine, or free weight) actually shown in a gym/workout context.\n` +
+      `Be conservative and default to NO. If the subject is anything else — a person ` +
+      `or body part (leg, arm, hand, face), an animal, food, a household or office ` +
+      `object (lamp, chair, table, appliance, bottle), a vehicle, scenery, or an ` +
+      `empty room — OR if you are not clearly confident it is gym equipment, respond ` +
+      `with EXACTLY: {"isMachine": false}\n` +
+      `Do NOT pick a machine for a non-gym object just because its shape looks similar.\n\n` +
+      `STEP 2 — ONLY if it is clearly gym equipment, choose the single best match and ` +
+      `up to 2 alternatives from THIS list only (use the exact key on the left):\n\n${list}\n\n` +
+      `Then respond with JSON: {"isMachine": true, "top":{"key":"<key>","confidence":<0-100>},` +
+      `"alternatives":[{"key":"<key>","confidence":<0-100>}]}.`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY.value()}`;
     const res = await fetch(url, {
