@@ -26,6 +26,6 @@ export const geminiModel = "gemini-2.0-flash";
 // Set true after deploying the `recognizeMachine` Cloud Function (see functions/
 // and RUNNING.md). When true, scans go through the secure server proxy instead
 // of calling Gemini directly from the app.
-export const useRecognitionProxy = false;
+export const useRecognitionProxy = true;
 
 
