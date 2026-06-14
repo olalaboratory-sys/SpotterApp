@@ -91,7 +91,7 @@ export default function LibraryScreen() {
               {results.length > 0 && <Text style={styles.sectionTitle}>{results.length} result{results.length === 1 ? '' : 's'}</Text>}
               {results.map(m => (
                 <TouchableOpacity key={m.key} style={styles.row} onPress={() => openMachine(m.key)} activeOpacity={0.8}>
-                  <View style={styles.rowIcon}><MachineIcon machineKey={m.key} size={20} color={Colors.greenDeep} /></View>
+                  <View style={styles.rowIcon}><MachineIcon machineKey={m.key} size={32} color={Colors.greenDeep} /></View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.rowName}>{m.name}</Text>
                     <Text style={styles.rowSub}>{m.cat}</Text>
@@ -138,7 +138,7 @@ export default function LibraryScreen() {
                 <Text style={styles.sectionTitle}>Good for beginners</Text>
                 {beginner.map(m => (
                   <TouchableOpacity key={m.key} style={styles.row} onPress={() => openMachine(m.key)} activeOpacity={0.8}>
-                    <View style={styles.rowIcon}><MachineIcon machineKey={m.key} size={20} color={Colors.greenDeep} /></View>
+                    <View style={styles.rowIcon}><MachineIcon machineKey={m.key} size={32} color={Colors.greenDeep} /></View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.rowName}>{m.name}</Text>
                       <Text style={styles.rowSub}>{m.cat}</Text>

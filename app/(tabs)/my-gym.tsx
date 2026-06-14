@@ -147,7 +147,7 @@ export default function MyPlacesTab() {
                       <View style={styles.cardImage}>
                         {m.photoUri
                           ? <Image source={{ uri: m.photoUri }} style={styles.cardPhoto} resizeMode="cover" />
-                          : <MachineIcon machineKey={m.key} size={32} color={Colors.green} />}
+                          : <MachineIcon machineKey={m.key} size={60} color={Colors.green} />}
                       </View>
                       <Text style={styles.cardName} numberOfLines={1}>{m.name}</Text>
                       {trained ? (

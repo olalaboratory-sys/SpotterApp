@@ -45,7 +45,7 @@ export default function CategoryScreen() {
                   activeOpacity={0.8}
                   onPress={() => router.push({ pathname: '/guide/[key]', params: { key: m.key } })}
                 >
-                  <View style={styles.rowIcon}><MachineIcon machineKey={m.key} size={20} color={Colors.greenDeep} /></View>
+                  <View style={styles.rowIcon}><MachineIcon machineKey={m.key} size={32} color={Colors.greenDeep} /></View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.rowName}>{m.name}</Text>
                     <Text style={styles.rowSub}>{m.cat}</Text>

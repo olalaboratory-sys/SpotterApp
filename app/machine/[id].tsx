@@ -63,7 +63,7 @@ export default function SavedMachineDetail() {
         <View style={styles.heroImage}>
           {entry.photoUri
             ? <Image source={{ uri: entry.photoUri }} style={styles.heroPhoto} resizeMode="cover" />
-            : <MachineIcon machineKey={entry.key} size={68} color={Colors.lime} />}
+            : <MachineIcon machineKey={entry.key} size={110} color={Colors.lime} />}
         </View>
         <View style={styles.heroText}>
           <Text style={styles.heroName}>{entry.name}</Text>

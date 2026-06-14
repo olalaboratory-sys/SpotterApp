@@ -58,7 +58,7 @@ function AltCard({ n, muscle, tag, altKey, onPress }: { n: string; muscle: strin
   const tagTextColor = tag === 'No machine' ? Colors.labelSecondary : tag === 'Easier' ? Colors.greenDeep : '#0a1f12';
   return (
     <TouchableOpacity style={styles.altCard} onPress={onPress} activeOpacity={onPress ? 0.7 : 1} disabled={!onPress}>
-      <View style={styles.altIcon}><MachineIcon machineKey={altKey} size={20} color={Colors.greenDeep} /></View>
+      <View style={styles.altIcon}><MachineIcon machineKey={altKey} size={34} color={Colors.greenDeep} /></View>
       <View style={{ flex: 1 }}>
         <Text style={styles.altName}>{n}</Text>
         <Text style={styles.altMuscle}>{muscle}</Text>
@@ -141,7 +141,7 @@ export default function GuideScreen() {
               <Image source={{ uri: photo }} style={styles.heroPhoto} resizeMode="cover" />
             ) : (
               <>
-                <MachineIcon machineKey={machineKey} size={76} color={Colors.lime} />
+                <MachineIcon machineKey={machineKey} size={132} color={Colors.lime} />
                 <View style={styles.dropHint}>
                   <Ionicons name="camera-outline" size={14} color="rgba(255,255,255,0.8)" />
                   <Text style={styles.dropHintText}>Drop a photo</Text>
