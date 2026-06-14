@@ -66,8 +66,8 @@ async function recognizeViaProxy(image: ScanImage): Promise<ScanResult> {
     if (e?.code === 'functions/resource-exhausted' || e?.code === 'resource-exhausted') {
       throw new ScanLimitError();
     }
-    // Other failures (network/parse) — degrade to stub rather than blocking.
-    return stubResult();
+    // Surface real failures as a scan error instead of inventing a random match.
+    throw e;
   }
 }
 
@@ -100,7 +100,7 @@ async function geminiRecognize(image: ScanImage): Promise<ScanResult> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: image.mime, data: image.base64 } }] }],
-      generationConfig: { temperature: 0, responseMimeType: 'application/json' },
+      generationConfig: { temperature: 0, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } },
     }),
   });
   if (!res.ok) throw new Error(`Gemini ${res.status}`);

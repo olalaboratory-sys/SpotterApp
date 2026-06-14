@@ -78,7 +78,13 @@ export const recognizeMachine = onCall(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: image } }] }],
-        generationConfig: { temperature: 0, responseMimeType: 'application/json' },
+        generationConfig: {
+          temperature: 0,
+          responseMimeType: 'application/json',
+          // 2.5-flash is a thinking model; disable thinking so it returns JSON
+          // directly and fast (and doesn't spend the budget thinking).
+          thinkingConfig: { thinkingBudget: 0 },
+        },
       }),
     });
     if (!res.ok) throw new HttpsError('internal', `Recognition failed (${res.status}).`);
