@@ -1,6 +1,7 @@
 import React from 'react';
 import Svg, { G, Path, Circle, Line, Rect, Ellipse } from 'react-native-svg';
 import { MACHINES } from '../constants/machines';
+import { MACHINE_SHAPES } from '../constants/machineIconShapes';
 import { Colors } from '../constants/colors';
 
 // A cohesive, app-owned line-icon set for gym equipment. Every icon is drawn on
@@ -239,10 +240,12 @@ export default function MachineIcon({
   size?: number;
   color?: string;
 }) {
+  // Prefer the machine's own unique icon; fall back to the archetype drawing.
+  const shape = (machineKey && MACHINE_SHAPES[machineKey]) || ICONS[archetypeFor(machineKey, illo)];
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <G stroke={color} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" fill="none">
-        {ICONS[archetypeFor(machineKey, illo)]}
+        {shape}
       </G>
     </Svg>
   );

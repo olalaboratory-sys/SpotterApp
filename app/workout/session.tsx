@@ -137,7 +137,7 @@ export default function WorkoutSession() {
         </View>
 
         <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
-          <View style={styles.illo}><MachineIcon illo={machine.illo} size={86} color={Colors.lime} /></View>
+          <View style={styles.illo}><MachineIcon machineKey={key} size={86} color={Colors.lime} /></View>
           <Text style={styles.exName}>{machine.name}</Text>
           <Text style={styles.exCat}>{machine.cat}</Text>
 
