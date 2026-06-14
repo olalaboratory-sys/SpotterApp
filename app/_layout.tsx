@@ -7,7 +7,7 @@ import { WorkoutsProvider } from '../context/WorkoutsContext';
 import { ToastProvider } from '../context/ToastContext';
 
 function RootNavigator() {
-  const { user, userProfile, loading } = useAuth();
+  const { user, userProfile, loading, emailVerified } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -20,9 +20,17 @@ function RootNavigator() {
     const inAuth = group === '(auth)';
     const inOnboarding = group === '(onboarding)';
     const onPaywall = group === 'paywall';
+    const onVerify = group === 'verify-email';
 
     if (!user) {
       if (!inAuth) router.replace('/(auth)/welcome');
+      return;
+    }
+
+    // Email/password sign-ups must confirm their address first. Social logins are
+    // verified by their provider, so emailVerified is already true for them.
+    if (!emailVerified) {
+      if (!onVerify) router.replace('/verify-email');
       return;
     }
 
@@ -36,12 +44,13 @@ function RootNavigator() {
     if (inAuth || inOnboarding || group === undefined) {
       router.replace('/(tabs)');
     }
-  }, [user, userProfile, loading, segments, router]);
+  }, [user, userProfile, loading, emailVerified, segments, router]);
 
   return (
     <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right', gestureEnabled: true }}>
       <Stack.Screen name="index" options={{ animation: 'fade' }} />
       <Stack.Screen name="(auth)" />
+      <Stack.Screen name="verify-email" />
       <Stack.Screen name="(onboarding)" />
       <Stack.Screen name="paywall" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
