@@ -91,8 +91,8 @@ export default function VerifyEmailScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F4F6F0' },
-  safe: { flex: 1, paddingHorizontal: 28 },
-  content: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  safe: { flex: 1 },
+  content: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 28 },
   iconWrap: {
     width: 84, height: 84, borderRadius: 24, backgroundColor: Colors.mist,
     alignItems: 'center', justifyContent: 'center', marginBottom: 24,
