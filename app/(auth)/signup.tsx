@@ -51,10 +51,18 @@ export default function SignupScreen() {
     try {
       await signUpWithEmail(name.trim(), email.trim(), password);
     } catch (err: any) {
-      const msg = err.code === 'auth/email-already-in-use'
-        ? 'This email is already registered. Try signing in.'
-        : err.message;
-      Alert.alert('Sign-up failed', msg);
+      if (err.code === 'auth/email-already-in-use') {
+        Alert.alert(
+          'Email already registered',
+          'An account with this email already exists. Want to sign in instead?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Sign in', onPress: () => router.replace({ pathname: '/(auth)/login', params: { email: email.trim() } }) },
+          ],
+        );
+      } else {
+        Alert.alert('Sign-up failed', err.message);
+      }
     } finally {
       setLoading(false);
     }
