@@ -66,8 +66,8 @@ export default function WelcomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.ink },
-  safe: { flex: 1, paddingHorizontal: 28, paddingBottom: 8 },
-  content: { flex: 1, justifyContent: 'center', gap: 30 },
+  safe: { flex: 1, paddingBottom: 8 },
+  content: { flex: 1, justifyContent: 'center', gap: 30, paddingHorizontal: 28 },
   heroWrap: { width: 96, height: 96, position: 'relative', justifyContent: 'center', alignItems: 'center' },
   heroPulse: {
     position: 'absolute', top: -10, left: -10, right: -10, bottom: -10,
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
   headline: { fontSize: 40, fontWeight: '700', lineHeight: 46, letterSpacing: -1, color: '#fff' },
   headlineLime: { color: Colors.lime },
   body: { fontSize: 17, lineHeight: 25, color: 'rgba(231,236,245,0.66)' },
-  ctaWrap: { paddingBottom: 12, gap: 6 },
+  ctaWrap: { paddingBottom: 12, gap: 6, paddingHorizontal: 28 },
   btnLime: {
     height: 56, borderRadius: 16, backgroundColor: Colors.lime,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
