@@ -21,7 +21,7 @@ export const googleIosClientId = "REPLACE_WITH_YOUR_IOS_CLIENT_ID.apps.googleuse
 // Cloud Function proxy (see /functions) and set useRecognitionProxy = true so the
 // key stays server-side and the daily cap is enforced server-side.
 export const geminiApiKey = "REPLACE_WITH_YOUR_GEMINI_API_KEY";
-export const geminiModel = "gemini-2.0-flash";
+export const geminiModel = "gemini-2.5-flash";
 
 // Set true after deploying the `recognizeMachine` Cloud Function (see functions/
 // and RUNNING.md). When true, scans go through the secure server proxy instead

@@ -7,7 +7,7 @@ const db = admin.firestore();
 
 // Set with: firebase functions:secrets:set GEMINI_API_KEY
 const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
-const MODEL = 'gemini-2.0-flash';
+const MODEL = 'gemini-2.5-flash';
 
 const FREE_DAILY = 10;
 const PREMIUM_DAILY = 100;
